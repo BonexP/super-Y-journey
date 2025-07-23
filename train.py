@@ -2,10 +2,14 @@ import argparse
 from pathlib import Path
 from ultralytics import YOLO
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
     parser.add_argument('--cfg', type=str, default='/home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml',
                         help='数据集配置文件 (.yaml) 路径')
+
+    parser.add_argument('--model', type=str, default='./modified_yolo11s.yaml',
+                        help='修改后的模型配置文件 (.yaml) 路径')
     # parser.add_argument('--weights', type=str, default='yolo11n.pt',
     #                     help='预训练权重路径，如 yolo11n.pt')
     parser.add_argument('--epochs', type=int, default=300,
@@ -38,8 +42,15 @@ if __name__ == '__main__':
     # 这里直接使用本地Ultralytics库中自带的配置文件
     yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # 原始YOLOv8模型（默认n）
 
-    model = YOLO('./yolo11s.pt')
+    # 使用配置文件初始化模型（不加载预训练权重）
+    model = YOLO('ultralytics/cfg/models/11/yolo11s.yaml')
 
+    # (可选） 或者使用预训练权重文件（推荐，包含了模型架构和权重）
+    # model = YOLO('./yolo11s.pt')
+    # model = YOLO('./yolo11s.pt')
+
+    # (可选) 如果需要修改模型配置文件，可以在这里加载修改后的配置
+    # model=YOLO(args.model)  # 使用修改后的模型配置文件
 
     # 开始训练
     model.train(
