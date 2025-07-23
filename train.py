@@ -8,7 +8,7 @@ def parse_args():
                         help='数据集配置文件 (.yaml) 路径')
     # parser.add_argument('--weights', type=str, default='yolo11n.pt',
     #                     help='预训练权重路径，如 yolo11n.pt')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=300,
                         help='训练 epochs')
     parser.add_argument('--batch-size', type=int, default=16,
                         help='batch size')
@@ -56,6 +56,7 @@ if __name__ == '__main__':
         exist_ok=True,                # 允许已存在的目录
         # 数据增强参数
         augment=True,                 # 启用数据增强
+        auto_augment='randaugment', # 使用 RandAugment 数据增强
         mosaic=1.0,                   # mosaic 数据增强概率
         mixup=0.2,                    # mixup 数据增强概率
         hsv_h=0.015,                  # HSV 色调增强幅度
@@ -64,8 +65,11 @@ if __name__ == '__main__':
         translate=0.1,                # 平移增强幅度
         scale=0.5,                    # 尺度缩放增强幅度
         fliplr=0.5,                   # 水平翻转概率
+        erasing=0.4,                   # 随机擦除概率
+        warmup_epochs=3,               # 预热轮数
+        close_mosaic=10,              # 关闭 mosaic 数据增强的轮数
         # 早停与 checkpoint
-        patience=20,                  # 早停轮数
+        patience=50,                  # 早停轮数
         save_period=10,               # 模型保存周期
         amp=True,                     # 启用自动混合精度
     )
