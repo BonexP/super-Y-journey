@@ -6,31 +6,31 @@ from ultralytics import YOLO
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
     parser.add_argument('--cfg', type=str, default='/home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml',
-                        help='数据集配置文件 (.yaml) 路径')
+                        help='数据集配置文件 (.yaml) 路径 (默认: /home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml)')
 
     parser.add_argument('--model', type=str, default='./modified_yolo11s.yaml',
-                        help='修改后的模型配置文件 (.yaml) 路径')
+                        help='修改后的模型配置文件 (.yaml) 路径 (默认: ./modified_yolo11s.yaml)')
     # parser.add_argument('--weights', type=str, default='yolo11n.pt',
     #                     help='预训练权重路径，如 yolo11n.pt')
     parser.add_argument('--epochs', type=int, default=300,
-                        help='训练 epochs')
+                        help='训练 epochs (默认: 300)')
     parser.add_argument('--batch-size', type=int, default=16,
-                        help='batch size')
+                        help='batch size (默认: 16)')
     parser.add_argument('--img-size', type=int, default=640,
-                        help='输入图片大小 (px)')
+                        help='输入图片大小 (px) (默认: 640)')
     parser.add_argument('--optimizer', type=str, default='Adam',
                         choices=['SGD', 'Adam'],
-                        help='优化器类型 (SGD 或 Adam)')
+                        help='优化器类型 (SGD 或 Adam) (默认: Adam)')
     parser.add_argument('--lr0', type=float, default=0.01,
-                        help='初始学习率')
+                        help='初始学习率 (默认: 0.01)')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
-                        help='权重衰减 (weight decay)')
+                        help='权重衰减 (weight decay) (默认: 0.0005)')
     parser.add_argument('--momentum', type=float, default=0.937,
-                        help='优化器动量 (momentum)')
+                        help='优化器动量 (momentum) (默认: 0.937)')
     parser.add_argument('--project', type=str, default='runs/train',
-                        help='实验结果保存目录')
+                        help='实验结果保存目录 (默认: runs/train)')
     parser.add_argument('--name', type=str, default='baseline_yolo11',
-                        help='实验名称，会在 project 下生成同名文件夹')
+                        help='实验名称，会在 project 下生成同名文件夹 (默认: baseline_yolo11)')
     return parser.parse_args()
 
 if __name__ == '__main__':
