@@ -17,7 +17,8 @@ def parse_args():
     parser.add_argument('--optimizer', type=str, default='Adam',
                         choices=['SGD', 'Adam'],
                         help='优化器类型 (SGD 或 Adam)')
-    parser.add_argument('--lr0', type=float, default=0.01,
+    # 降低初始学习率
+    parser.add_argument('--lr0', type=float, default=0.001,
                         help='初始学习率')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
                         help='权重衰减 (weight decay)')
@@ -36,10 +37,17 @@ if __name__ == '__main__':
 
     # 加载模型
     # 这里直接使用本地Ultralytics库中自带的配置文件
-    yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # 原始YOLOv8模型（默认n）
+    yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
-    model = YOLO('./yolo11s.pt')
+    # 使用配置文件初始化模型（不加载预训练权重）
+    model = YOLO('ultralytics/cfg/models/11/yolo11s.yaml')
 
+    # (可选） 或者使用预训练权重文件（推荐，包含了模型架构和权重）
+    # model = YOLO('./yolo11s.pt')
+    # model = YOLO('./yolo11s.pt')
+
+    # (可选) 如果需要修改模型配置文件，可以在这里加载修改后的配置
+    # model=YOLO(args.model)  # 使用修改后的模型配置文件
 
     # 开始训练
     model.train(
@@ -66,7 +74,7 @@ if __name__ == '__main__':
         scale=0.5,                    # 尺度缩放增强幅度
         fliplr=0.5,                   # 水平翻转概率
         erasing=0.4,                   # 随机擦除概率
-        warmup_epochs=3,               # 预热轮数
+        warmup_epochs=5,               # 增加预热轮数
         close_mosaic=10,              # 关闭 mosaic 数据增强的轮数
         # 早停与 checkpoint
         patience=50,                  # 早停轮数
