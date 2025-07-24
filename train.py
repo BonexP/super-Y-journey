@@ -2,7 +2,6 @@ import argparse
 from pathlib import Path
 from ultralytics import YOLO
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
     parser.add_argument('--cfg', type=str, default='/home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml',
@@ -20,6 +19,10 @@ def parse_args():
                         help='输入图片大小 (px) (默认: 640)')
     parser.add_argument('--optimizer', type=str, default='Adam',
                         choices=['SGD', 'Adam'],
+                        help='优化器类型 (SGD 或 Adam)')
+    # 降低初始学习率
+    parser.add_argument('--lr0', type=float, default=0.001,
+                        help='初始学习率')
                         help='优化器类型 (SGD 或 Adam) (默认: Adam)')
     parser.add_argument('--lr0', type=float, default=0.01,
                         help='初始学习率 (默认: 0.01)')
@@ -40,7 +43,7 @@ if __name__ == '__main__':
 
     # 加载模型
     # 这里直接使用本地Ultralytics库中自带的配置文件
-    yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # 原始YOLOv8模型（默认n）
+    yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
     model = YOLO('ultralytics/cfg/models/11/yolo11s.yaml')
@@ -77,7 +80,7 @@ if __name__ == '__main__':
         scale=0.5,                    # 尺度缩放增强幅度
         fliplr=0.5,                   # 水平翻转概率
         erasing=0.4,                   # 随机擦除概率
-        warmup_epochs=3,               # 预热轮数
+        warmup_epochs=5,               # 增加预热轮数
         close_mosaic=10,              # 关闭 mosaic 数据增强的轮数
         # 早停与 checkpoint
         patience=50,                  # 早停轮数
