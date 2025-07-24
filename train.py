@@ -19,13 +19,10 @@ def parse_args():
                         help='输入图片大小 (px) (默认: 640)')
     parser.add_argument('--optimizer', type=str, default='Adam',
                         choices=['SGD', 'Adam'],
-                        help='优化器类型 (SGD 或 Adam)')
+                        help='优化器类型 (SGD 或 Adam) (默认: Adam)')
     # 降低初始学习率
     parser.add_argument('--lr0', type=float, default=0.001,
-                        help='初始学习率')
-                        help='优化器类型 (SGD 或 Adam) (默认: Adam)')
-    parser.add_argument('--lr0', type=float, default=0.01,
-                        help='初始学习率 (默认: 0.01)')
+                        help='初始学习率(默认:0.001)')
     parser.add_argument('--weight-decay', type=float, default=0.0005,
                         help='权重衰减 (weight decay) (默认: 0.0005)')
     parser.add_argument('--momentum', type=float, default=0.937,
