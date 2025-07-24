@@ -94,6 +94,8 @@ from ultralytics.utils.torch_utils import (
 )
 
 
+from .modules  import ConvNeXt, Block, ConvNeXtBackbone,LayerNorm
+
 class BaseModel(torch.nn.Module):
     """
     Base class for all YOLO models in the Ultralytics family.
@@ -1644,6 +1646,10 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
+            # add ConvNeXt modules
+            Block, # ConvNeXt Block
+            ConvNeXt, # ConvNeXt model
+            LayerNorm, # ConvNeXt LayerNorm
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1700,6 +1706,16 @@ def parse_model(d, ch, verbose=True):
                     args.extend((True, 1.2))
             if m is C2fCIB:
                 legacy = False
+            if m is ConvNeXt:
+               # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
+             args = [c1, args[0], *args[1:]]
+            elif m is Block:
+                # args格式: [dim, drop_path, layer_scale_init_value]
+                args = [c1, *args]
+                c2 = c1  # Block输出通道数与输入相同
+            # 下面的代码不能取消注释，因为如果取消了，那么代码的逻辑就会出错，也就是直接走这里else出口。
+            # else:
+            #     args = [c1, c2, *args[1:]]
         elif m is AIFI:
             args = [ch[f], *args]
         elif m in frozenset({HGStem, HGBlock}):
