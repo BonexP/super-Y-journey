@@ -99,10 +99,11 @@ def bbox_iou(
         GIoU (bool, optional): If True, calculate Generalized IoU.
         DIoU (bool, optional): If True, calculate Distance IoU.
         CIoU (bool, optional): If True, calculate Complete IoU.
+        SIoU (bool, optional): If True, calculate Scylla IoU.
         eps (float, optional): A small value to avoid division by zero.
 
     Returns:
-        (torch.Tensor): IoU, GIoU, DIoU, or CIoU values depending on the specified flags.
+        (torch.Tensor): IoU, GIoU, DIoU, CIoU, or SIoU values depending on the specified flags.
     """
     # Get the coordinates of bounding boxes
     if xywh:  # transform from xywh to xyxy
@@ -116,6 +117,11 @@ def bbox_iou(
         w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
         w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
 
+    if SIoU:
+        return SIoU_loss(
+            torch.cat((b1_x1, b1_y1, b1_x2, b1_y2), -1), torch.cat((b2_x1, b2_y1, b2_x2, b2_y2), -1), eps=eps
+        )
+
     # Intersection area
     inter = (b1_x2.minimum(b2_x2) - b1_x1.maximum(b2_x1)).clamp_(0) * (
         b1_y2.minimum(b2_y2) - b1_y1.maximum(b2_y1)
@@ -126,16 +132,6 @@ def bbox_iou(
 
     # IoU
     iou = inter / union
-    if SIoU:
-        # SIoU Loss https://arxiv.org/pdf/2205.12740.pdf
-        s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5
-        s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) * 0.5
-        sigma = (s_cw ** 2 + s_ch ** 2).sqrt() + eps
-        angle_cost = (s_ch.abs() / sigma).sin().arcsin().pow(2).sin() * 2 - 1
-        distance_cost = (1 - torch.exp(-angle_cost * (s_cw / ((b2_x1 - b1_x2).maximum(b1_x1 - b2_x2)) + eps)).pow(2)) + (1 - torch.exp(-angle_cost * (s_ch / ((b2_y1 - b1_y2).maximum(b1_y1 - b2_y2)) + eps)).pow(2))
-        shape_cost = (1 - torch.exp(-((w1 - w2).abs() / (w1.maximum(w2)) + eps))).pow(4) + ( 1 - torch.exp(-((h1 - h2).abs() / (h1.maximum(h2)) + eps))).pow(4)
-        return iou - (distance_cost + shape_cost) * 0.5
-
     if CIoU or DIoU or GIoU:
         cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
         ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
@@ -161,54 +157,57 @@ def fp16_clamp(x, min=None, max=None):
 
     return x.clamp(min, max)
 
-# angle cost
-def SIoU_loss(box1, box2, theta=4):
-    eps = 1e-7
-    cx_pred = (box1[:, 0] + box1[:, 2]) / 2
-    cy_pred = (box1[:, 1] + box1[:, 3]) / 2
-    cx_gt = (box2[:, 0] + box2[:, 2]) / 2
-    cy_gt = (box2[:, 1] + box2[:, 3]) / 2
+def SIoU_loss(box1, box2, theta=4, eps=1e-7):
+    """
+    Calculate SIoU loss.
 
-    dist = ((cx_pred - cx_gt)**2 + (cy_pred - cy_gt)**2) ** 0.5
-    ch = torch.max(cy_gt, cy_pred) - torch.min(cy_gt, cy_pred)
-    x = ch / (dist + eps)
+    Args:
+        box1 (torch.Tensor): A tensor of shape (N, 4) representing N bounding boxes in (x1, y1, x2, y2) format.
+        box2 (torch.Tensor): A tensor of shape (M, 4) representing M bounding boxes in (x1, y1, x2, y2) format.
+        theta (int, optional): Angle cost parameter. Defaults to 4.
+        eps (float, optional): A small value to avoid division by zero.
 
-    angle = 1 - 2*torch.sin(torch.arcsin(x)-torch.pi/4)**2
-    # distance cost
-    xmin = torch.min(box1[:, 0], box2[:, 0])
-    xmax = torch.max(box1[:, 2], box2[:, 2])
-    ymin = torch.min(box1[:, 1], box2[:, 1])
-    ymax = torch.max(box1[:, 3], box2[:, 3])
-    cw = xmax - xmin
-    ch = ymax - ymin
-    px = ((cx_gt - cx_pred) / (cw+eps))**2
-    py = ((cy_gt - cy_pred) / (ch+eps))**2
-    gama = 2 - angle
-    dis = (1 - torch.exp(-1 * gama * px)) + (1 - torch.exp(-1 * gama * py))
+    Returns:
+        (torch.Tensor): The SIoU loss value.
+    """
+    # Unpack boxes
+    b1_x1, b1_y1, b1_x2, b1_y2 = box1.chunk(4, -1)
+    b2_x1, b2_y1, b2_x2, b2_y2 = box2.chunk(4, -1)
+    w1, h1 = b1_x2 - b1_x1, b1_y2 - b1_y1
+    w2, h2 = b2_x2 - b2_x1, b2_y2 - b2_y1
 
-    #shape cost
-    w_pred = box1[:, 2] - box1[:, 0]
-    h_pred = box1[:, 3] - box1[:, 1]
-    w_gt = box2[:, 2] - box2[:, 0]
-    h_gt = box2[:, 3] - box2[:, 1]
-    ww = torch.abs(w_pred - w_gt) / (torch.max(w_pred, w_gt) + eps)
-    wh = torch.abs(h_gt - h_pred) / (torch.max(h_gt, h_pred) + eps)
-    omega = (1 - torch.exp(-1 * wh)) ** theta + (1 - torch.exp(-1 * ww)) ** theta
+    # Intersection area
+    inter = (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) * \
+            (torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)).clamp(0)
 
-    #IoU loss
-    lt = torch.max(box1[..., :2], box2[..., :2])  # [B, rows, 2]
-    rb = torch.min(box1[..., 2:], box2[..., 2:])  # [B, rows, 2]
+    # Union Area
+    union = w1 * h1 + w2 * h2 - inter + eps
+    iou = inter / union
 
-    wh = fp16_clamp(rb - lt, min=0)
-    overlap = wh[..., 0] * wh[..., 1]
-    area1 = (box1[..., 2] - box1[..., 0]) * (
-            box1[..., 3] - box1[..., 1])
-    area2 = (box2[..., 2] - box2[..., 0]) * (
-            box2[..., 3] - box2[..., 1])
-    iou = overlap / (area1 + area2 - overlap)
+    # Angle cost
+    s_cw = (b2_x1 + b2_x2 - b1_x1 - b1_x2) * 0.5
+    s_ch = (b2_y1 + b2_y2 - b1_y1 - b1_y2) * 0.5
+    sigma = torch.sqrt(s_cw**2 + s_ch**2 + eps)
+    sin_alpha_1 = torch.abs(s_cw) / sigma
+    sin_alpha_2 = torch.abs(s_ch) / sigma
+    threshold = pow(2, 0.5) / 2
+    sin_alpha = torch.where(sin_alpha_1 > threshold, sin_alpha_2, sin_alpha_1)
+    angle_cost = torch.cos(torch.arcsin(sin_alpha) * 2 - torch.pi / 2)
 
-    SIoU = 1 - iou + (omega + dis) / 2
-    return SIoU, iou
+    # Distance cost
+    gama = 2 - angle_cost
+    c_w = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)
+    c_h = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)
+    rho_x = (s_cw / (c_w + eps)) ** 2
+    rho_y = (s_ch / (c_h + eps)) ** 2
+    distance_cost = 2 - torch.exp(-gama * rho_x) - torch.exp(-gama * rho_y)
+
+    # Shape cost
+    omega_w = torch.abs(w1 - w2) / torch.max(w1, w2).clamp(min=eps)
+    omega_h = torch.abs(h1 - h2) / torch.max(h1, h2).clamp(min=eps)
+    shape_cost = torch.pow(1 - torch.exp(-omega_w), theta) + torch.pow(1 - torch.exp(-omega_h), theta)
+
+    return iou - (distance_cost + shape_cost) * 0.5
 
 def mask_iou(mask1: torch.Tensor, mask2: torch.Tensor, eps: float = 1e-7) -> torch.Tensor:
     """
