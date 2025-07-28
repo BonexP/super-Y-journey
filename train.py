@@ -40,10 +40,14 @@ if __name__ == '__main__':
 
     # 加载模型
     # 这里直接使用本地Ultralytics库中自带的配置文件
-    yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
+    # yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
-    model = YOLO('ultralytics/cfg/models/11/yolo11s.yaml')
+    custom_yaml = 'ultralytics/cfg/models/11/yolo_CXblock.yaml'
+    model = YOLO(custom_yaml)
+    with open(custom_yaml, 'r', encoding='utf-8') as f:
+        yaml_content = f.read()
+    print("YAML 文件正文如下：\n" + yaml_content)
 
     # (可选） 或者使用预训练权重文件（推荐，包含了模型架构和权重）
     # model = YOLO('./yolo11s.pt')
