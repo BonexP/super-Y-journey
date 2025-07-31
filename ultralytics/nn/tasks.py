@@ -68,6 +68,10 @@ from ultralytics.nn.modules import (
     YOLOEDetect,
     YOLOESegment,
     v10Detect,
+    ConvNeXt,
+    Block,
+    LayerNorm,
+    CXBlock,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -94,7 +98,9 @@ from ultralytics.utils.torch_utils import (
 )
 
 
-from .modules  import ConvNeXt, Block, ConvNeXtBackbone,LayerNorm
+from .modules  import ConvNeXt, Block, LayerNorm
+from .modules import CXBlock
+
 
 class BaseModel(torch.nn.Module):
     """
@@ -1650,6 +1656,7 @@ def parse_model(d, ch, verbose=True):
             Block, # ConvNeXt Block
             ConvNeXt, # ConvNeXt model
             LayerNorm, # ConvNeXt LayerNorm
+            CXBlock
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1672,6 +1679,7 @@ def parse_model(d, ch, verbose=True):
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
+        print(f"{i:>3}{str(f):>20}{n:>3},\nLayer {i}: module={m}, args={args}")  # print module info
         m = (
             getattr(torch.nn, m[3:])
             if "nn." in m
@@ -1679,6 +1687,7 @@ def parse_model(d, ch, verbose=True):
             if "torchvision.ops." in m
             else globals()[m]
         )  # get module
+        print(m)  # print module class
         for j, a in enumerate(args):
             if isinstance(a, str):
                 with contextlib.suppress(ValueError):
@@ -1708,14 +1717,7 @@ def parse_model(d, ch, verbose=True):
                 legacy = False
             if m is ConvNeXt:
                # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
-             args = [c1, args[0], *args[1:]]
-            elif m is Block:
-                # args格式: [dim, drop_path, layer_scale_init_value]
-                args = [c1, *args]
-                c2 = c1  # Block输出通道数与输入相同
-            # 下面的代码不能取消注释，因为如果取消了，那么代码的逻辑就会出错，也就是直接走这里else出口。
-            # else:
-            #     args = [c1, c2, *args[1:]]
+                args = [c1, args[0], *args[1:]]
         elif m is AIFI:
             args = [ch[f], *args]
         elif m in frozenset({HGStem, HGBlock}):

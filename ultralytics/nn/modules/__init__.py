@@ -59,6 +59,7 @@ from .block import (
     ResNetLayer,
     SCDown,
     TorchVision,
+    CXBlock
 )
 from .conv import (
     CBAM,
@@ -102,7 +103,7 @@ from .transformer import (
     TransformerLayer,
 )
 # 在ultralytics/nn/modules/__init__.py中添加
-from .convnext_backbone import ConvNeXtBackbone
+# from .convnext_backbone import ConvNeXtBackbone
 from .convnext import ConvNeXt, Block,LayerNorm
 
 
@@ -183,4 +184,8 @@ __all__ = (
     "TorchVision",
     "Index",
     "A2C2f",
+    "ConvNeXt",
+    "Block",
+    "LayerNorm",
+    "CXBlock",
 )

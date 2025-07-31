@@ -6,8 +6,11 @@ from typing import List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
+
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
+
 
 from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .transformer import TransformerBlock
@@ -2031,3 +2034,202 @@ class SAVPE(nn.Module):
         aggregated = score.transpose(-2, -3) @ x.reshape(B, self.c, C // self.c, -1).transpose(-1, -2)
 
         return F.normalize(aggregated.transpose(-2, -3).reshape(B, Q, -1), dim=-1, p=2)
+
+
+class LayerNorm(nn.Module):
+    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first.
+    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with
+    shape (batch_size, height, width, channels) while channels_first corresponds to inputs
+    with shape (batch_size, channels, height, width).
+    """
+
+    def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(normalized_shape))
+        self.bias = nn.Parameter(torch.zeros(normalized_shape))
+        self.eps = eps
+        self.data_format = data_format
+        if self.data_format not in ["channels_last", "channels_first"]:
+            raise NotImplementedError
+        self.normalized_shape = (normalized_shape,)
+
+    def forward(self, x):
+        if self.data_format == "channels_last":
+            return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+        elif self.data_format == "channels_first":
+            u = x.mean(1, keepdim=True)
+            s = (x - u).pow(2).mean(1, keepdim=True)
+            x = (x - u) / torch.sqrt(s + self.eps)
+            x = self.weight[:, None, None] * x + self.bias[:, None, None]
+            return x
+
+# CXBlock Method 1
+class CXBlock(nn.Module):
+    """
+    ConvNeXt Block for efficient feature extraction in convolutional neural networks.
+
+    This block implements a modified version of the ConvNeXt architecture, offering improved performance and
+    flexibility in feature extraction.
+
+    Attributes:
+        dwconv (nn.Conv2d): Depthwise or standard 2D convolution layer.
+        norm (LayerNorm2d): Layer normalization applied to channels.
+        pwconv1 (nn.Linear): First pointwise convolution implemented as a linear layer.
+        act (nn.GELU): GELU activation function.
+        pwconv2 (nn.Linear): Second pointwise convolution implemented as a linear layer.
+        gamma (nn.Parameter | None): Learnable scale parameter for layer scaling.
+        drop_path (nn.Module): DropPath layer for stochastic depth regularization.
+
+    Methods:
+        forward: Processes the input tensor through the ConvNeXt block.
+
+    Examples:
+        >>> import torch
+        >>> x = torch.randn(1, 64, 56, 56)
+        >>> block = CXBlock(dim=64, kernel_size=7, padding=3)
+        >>> output = block(x)
+        >>> print(output.shape)
+        torch.Size([1, 64, 56, 56])
+    """
+
+    def __init__(
+        self,
+        dim: int,
+        kernel_size: int = 7,
+        padding: int = 3,
+        drop_path: float = 0.0,
+        layer_scale_init_value: float = 1e-6,
+        use_dwconv: bool = True,
+    ):
+        """
+        Initialize a ConvNeXt Block for efficient feature extraction in convolutional neural networks.
+
+        This block implements a modified version of the ConvNeXt architecture, offering improved performance and
+        flexibility in feature extraction.
+
+        Args:
+            dim (int): Number of input channels.
+            kernel_size (int): Size of the convolutional kernel.
+            padding (int): Padding size for the convolution.
+            drop_path (float): Stochastic depth rate.
+            layer_scale_init_value (float): Initial value for Layer Scale.
+            use_dwconv (bool): Whether to use depthwise convolution.
+
+        Examples:
+            >>> block = CXBlock(dim=64, kernel_size=7, padding=3)
+            >>> x = torch.randn(1, 64, 32, 32)
+            >>> output = block(x)
+            >>> print(output.shape)
+            torch.Size([1, 64, 32, 32])
+        """
+        super().__init__()
+        self.dwconv = nn.Conv2d(
+            dim,
+            dim,
+            kernel_size=kernel_size,
+            padding=padding,
+            groups=dim if use_dwconv else 1,
+        )  # depthwise conv
+        self.norm = LayerNorm2d(dim, eps=1e-6)
+        self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
+        self.act = nn.GELU()
+        self.pwconv2 = nn.Linear(4 * dim, dim)
+        self.gamma = (
+            nn.Parameter(layer_scale_init_value * torch.ones(dim), requires_grad=True)
+            if layer_scale_init_value > 0
+            else None
+        )
+        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Apply ConvNeXt block operations to input tensor, including convolutions and residual connection."""
+        input = x
+        x = self.dwconv(x)
+        x = self.norm(x)
+        x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
+        x = self.pwconv1(x)
+        x = self.act(x)
+        x = self.pwconv2(x)
+        if self.gamma is not None:
+            x = self.gamma * x
+        x = x.permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
+
+        x = input + self.drop_path(x)
+        return x
+class DropPath(nn.Module):
+    """
+    Implements stochastic depth regularization for neural networks during training.
+
+    Attributes:
+        drop_prob (float): Probability of dropping a path during training.
+        scale_by_keep (bool): Whether to scale the output by the keep probability.
+
+    Methods:
+        forward: Applies stochastic depth to input tensor during training, with optional scaling.
+
+    Examples:
+        >>> drop_path = DropPath(drop_prob=0.2, scale_by_keep=True)
+        >>> x = torch.randn(32, 64, 224, 224)
+        >>> output = drop_path(x)
+    """
+
+    def __init__(self, drop_prob: float = 0.0, scale_by_keep: bool = True):
+        """Initialize DropPath module for stochastic depth regularization during training."""
+        super().__init__()
+        self.drop_prob = drop_prob
+        self.scale_by_keep = scale_by_keep
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Apply stochastic depth to input tensor during training, with optional scaling."""
+        if self.drop_prob == 0.0 or not self.training:
+            return x
+        keep_prob = 1 - self.drop_prob
+        shape = (x.shape[0],) + (1,) * (x.ndim - 1)
+        random_tensor = x.new_empty(shape).bernoulli_(keep_prob)
+        if keep_prob > 0.0 and self.scale_by_keep:
+            random_tensor.div_(keep_prob)
+        return x * random_tensor
+# CXBlock Method 2
+class CXBlock_origin(nn.Module):
+    """ConvNeXt Block. There are two equivalent implementations:
+    (1) DwConv -> LayerNorm (channels_first) -> 1x1 Conv -> GELU -> 1x1 Conv; all in (N, C, H, W)
+    (2) DwConv -> Permute to (N, H, W, C); LayerNorm (channels_last) -> Linear -> GELU -> Linear; Permute back
+    We use (2) as we find it slightly faster in PyTorch
+
+    Args:
+        c1 (int): Number of input channels.
+        c2 (int): Number of output channels (should equal c1 for residual connection).
+        drop_path (float): Stochastic depth rate. Default: 0.0
+        layer_scale_init_value (float): Init value for Layer Scale. Default: 1e-6.
+    """
+
+    def __init__(self, c1, c2=None, drop_path=0., layer_scale_init_value=1e-6):
+        super().__init__()
+        # 确保输入和输出通道数相同（残差连接要求）
+        dim = c1
+        if c2 is not None and c2 != c1:
+            print(f"Warning: CXBlock requires c1==c2 for residual connection. Got c1={c1}, c2={c2}. Using c1={c1}")
+
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim)  # depthwise conv
+        self.norm = LayerNorm(dim, eps=1e-6)
+        self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
+        self.act = nn.GELU()
+        self.pwconv2 = nn.Linear(4 * dim, dim)
+        self.gamma = nn.Parameter(layer_scale_init_value * torch.ones((dim)),
+                                requires_grad=True) if layer_scale_init_value > 0 else None
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+
+    def forward(self, x):
+        input = x
+        x = self.dwconv(x)
+        x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
+        x = self.norm(x)
+        x = self.pwconv1(x)
+        x = self.act(x)
+        x = self.pwconv2(x)
+        if self.gamma is not None:
+            x = self.gamma * x
+        x = x.permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
+
+        x = input + self.drop_path(x)
+        return x
