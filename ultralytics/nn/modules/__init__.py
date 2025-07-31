@@ -59,7 +59,8 @@ from .block import (
     ResNetLayer,
     SCDown,
     TorchVision,
-    CXBlock
+    CXBlock,
+    C2f_ConvNeXt,
 )
 from .conv import (
     CBAM,
@@ -188,4 +189,5 @@ __all__ = (
     "Block",
     "LayerNorm",
     "CXBlock",
+    "C2f_ConvNeXt",
 )

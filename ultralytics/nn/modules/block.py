@@ -2094,7 +2094,8 @@ class CXBlock(nn.Module):
 
     def __init__(
         self,
-        dim: int,
+        c1: int, # 输入通道数，对应YOLO中的c1
+        c2: int, # 输出通道数，对于残差块，c1==c2
         kernel_size: int = 7,
         padding: int = 3,
         drop_path: float = 0.0,
@@ -2123,15 +2124,14 @@ class CXBlock(nn.Module):
             torch.Size([1, 64, 32, 32])
         """
         super().__init__()
-        self.dwconv = nn.Conv2d(
-            dim,
-            dim,
-            kernel_size=kernel_size,
-            padding=padding,
-            groups=dim if use_dwconv else 1,
-        )  # depthwise conv
-        self.norm = LayerNorm2d(dim, eps=1e-6)
-        self.pwconv1 = nn.Linear(dim, 4 * dim)  # pointwise/1x1 convs, implemented with linear layers
+        assert c1 == c2, "CXBlock is a residual block and requires c1 == c2."
+        dim = c1
+        padding = kernel_size // 2
+
+        self.dwconv = nn.Conv2d(dim, dim, kernel_size=kernel_size, padding=padding, groups=dim)
+        # 使用标准的 nn.LayerNorm，因为它在 permute 后操作，更符合原文的快速实现
+        self.norm = nn.LayerNorm(dim, eps=1e-6)
+        self.pwconv1 = nn.Linear(dim, 4 * dim)
         self.act = nn.GELU()
         self.pwconv2 = nn.Linear(4 * dim, dim)
         self.gamma = (
@@ -2189,7 +2189,35 @@ class DropPath(nn.Module):
         if keep_prob > 0.0 and self.scale_by_keep:
             random_tensor.div_(keep_prob)
         return x * random_tensor
-# CXBlock Method 2
+
+
+# --- 新的容器块：C2f_ConvNeXt - --
+
+
+class C2f_ConvNeXt(nn.Module):
+    """
+    CSP Bottleneck with ConvNeXt blocks.
+    这个模块的结构与 C2f 完全相同，只是将内部的 Bottleneck 替换为了 CXBlock。
+    """
+
+    def __init__(self, c1: int, c2: int, n: int = 1, shortcut: bool = False, g: int = 1, e: float = 0.5):
+        super().__init__()
+        self.c = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)
+        # 关键的替换在这里！
+        # 我们用 CXBlock 替换了原来的 Bottleneck
+        # 注意：CXBlock 不需要 shortcut, g, e 等参数，但需要 drop_path
+        # drop_path 通常随网络深度增加，这里为了简单设为0
+        self.m = nn.ModuleList(CXBlock(c1=self.c, c2=self.c, drop_path=0.0) for _ in range(n))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # forward 逻辑与 C2f 完全相同
+        y = list(self.cv1(x).chunk(2, 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+# CXBlock Method 2 official implementation
 class CXBlock_origin(nn.Module):
     """ConvNeXt Block. There are two equivalent implementations:
     (1) DwConv -> LayerNorm (channels_first) -> 1x1 Conv -> GELU -> 1x1 Conv; all in (N, C, H, W)

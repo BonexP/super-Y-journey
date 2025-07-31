@@ -14,17 +14,17 @@ scales: # model compound scaling constants, i.e. 'model=yolo11n.yaml' will call 
 # YOLO11n backbone
 backbone:
   # [from, repeats, module, args]
-  - [-1, 1, Conv, [64, 3, 2]] # 0-P1/2
-  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
-  - [-1, 2, CXBlock, [128]]
-  - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
-  - [-1, 2, CXBlock, [256]]
-  - [-1, 1, Conv, [512, 3, 2]] # 5-P4/16
-  - [-1, 2, CXBlock, [512]]
-  - [-1, 1, Conv, [1024, 3, 2]] # 7-P5/32
-  - [-1, 2, CXBlock, [1024]]
-  - [-1, 1, SPPF, [1024, 5]] # 9
-  - [-1, 2, C2PSA, [1024]] # 10
+  - [-1, 1, Conv, [64, 3, 2]]           # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]]          # 1-P2/4
+  - [-1, 2, C2f_ConvNeXt, [128]]        # 2. 注意: 输入输出通道数相同
+  - [-1, 1, Conv, [256, 3, 2]]          # 3-P3/8
+  - [-1, 2, C2f_ConvNeXt, [256]]        # 4
+  - [-1, 1, Conv, [512, 3, 2]]          # 5-P4/16
+  - [-1, 2, C2f_ConvNeXt, [512]]        # 6
+  - [-1, 1, Conv, [1024, 3, 2]]         # 7-P5/32
+  - [-1, 2, C2f_ConvNext, [1024]]
+  - [-1, 1, SPPF, [1024, 5]]            # 9
+  - [-1, 2, C2PSA, [1024]]              # 10
 
 # YOLO11n head
 head:

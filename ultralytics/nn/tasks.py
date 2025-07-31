@@ -98,7 +98,7 @@ from ultralytics.utils.torch_utils import (
 )
 
 
-from .modules  import ConvNeXt, Block, LayerNorm
+from .modules import ConvNeXt, Block, LayerNorm, C2f_ConvNeXt
 from .modules import CXBlock
 
 
@@ -1656,7 +1656,8 @@ def parse_model(d, ch, verbose=True):
             Block, # ConvNeXt Block
             ConvNeXt, # ConvNeXt model
             LayerNorm, # ConvNeXt LayerNorm
-            CXBlock
+            CXBlock,
+            C2f_ConvNeXt
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
