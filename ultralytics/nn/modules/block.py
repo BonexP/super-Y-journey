@@ -2145,8 +2145,8 @@ class CXBlock(nn.Module):
         """Apply ConvNeXt block operations to input tensor, including convolutions and residual connection."""
         input = x
         x = self.dwconv(x)
-        x = self.norm(x)
         x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
+        x = self.norm(x)
         x = self.pwconv1(x)
         x = self.act(x)
         x = self.pwconv2(x)
