@@ -96,6 +96,8 @@ from ultralytics.utils.torch_utils import (
 
 from .modules  import ConvNeXt, Block, ConvNeXtBackbone,LayerNorm
 
+from .modules import  CBAM
+
 class BaseModel(torch.nn.Module):
     """
     Base class for all YOLO models in the Ultralytics family.
@@ -1650,6 +1652,7 @@ def parse_model(d, ch, verbose=True):
             Block, # ConvNeXt Block
             ConvNeXt, # ConvNeXt model
             LayerNorm, # ConvNeXt LayerNorm
+            CBAM # Convolutional Block Attention Module
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1707,8 +1710,15 @@ def parse_model(d, ch, verbose=True):
             if m is C2fCIB:
                 legacy = False
             if m is ConvNeXt:
-               # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
-             args = [c1, args[0], *args[1:]]
+                pass
+                # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
+            if m is CBAM:
+                c1, c2 = ch[f], ch[f]  # CBAM does not change channels, so c2 = c1
+                args = [c1, c2] + args[1:]  # Pass c1, c2 to CBAM constructor if needed, though our implementation only uses c1.
+                                            # The parser expects args[0] to be output channels, but for CBAM it's the same as input.
+                                            # A cleaner way is to just use c1.
+                args = [c1]  # Our CBAM implementation only needs input channels.
+
             elif m is Block:
                 # args格式: [dim, drop_path, layer_scale_init_value]
                 args = [c1, *args]

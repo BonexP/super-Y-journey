@@ -4,8 +4,8 @@ from ultralytics import YOLO
 
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
-    parser.add_argument('--cfg', type=str, default='/home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml',
-                        help='数据集配置文件 (.yaml) 路径 (默认: /home/user/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml)')
+    parser.add_argument('--cfg', type=str, default='/home/user/PROJECT/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml',
+                        help='数据集配置文件 (.yaml) 路径 (默认: /home/user/PROJECT/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml)')
 
     parser.add_argument('--model', type=str, default='./modified_yolo11s.yaml',
                         help='修改后的模型配置文件 (.yaml) 路径 (默认: ./modified_yolo11s.yaml)')
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
-    custom_yaml= 'ultralytics/cfg/models/11/yolo11s.yaml'
+    custom_yaml= 'ultralytics/cfg/models/11/yolo11s_CBAM.yaml'
     model = YOLO(custom_yaml)
     with open(custom_yaml, 'r', encoding='utf-8') as f:
         yaml_content = f.read()
