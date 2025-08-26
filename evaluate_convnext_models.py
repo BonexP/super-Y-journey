@@ -18,6 +18,12 @@ from ultralytics import YOLO
 RUNS_DIR = './runs/train'
 # 您要评估的实验名称模式，使用通配符 *
 EXPERIMENT_PATTERN = 'baseline_yolo11_custom_ConvNeXt*'
+# 修改配置区，支持多个实验模式
+EXPERIMENT_PATTERNS = [
+    'baseline_yolo11_custom_ConvNeXt*',
+    'baseline_yolo11_test_lowlr*',
+    'baseline_yolo11_custom_CBAM*'
+]
 # 数据集配置文件 .yaml 的路径
 DATASET_YAML_PATH = '/home/user/PROJECT/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml'
 # 最终报告保存的文件名
@@ -118,7 +124,7 @@ def evaluate_experiment(exp_path: Path, dataset_yaml: str):
             data=dataset_yaml,
             imgsz=imgsz,
             batch=batch_size,
-            split='val',
+            split='test',
             verbose=False
         )
 
@@ -132,13 +138,13 @@ def evaluate_experiment(exp_path: Path, dataset_yaml: str):
 
     except Exception as e:
         print(f"  [!] Error during validation for {experiment_name}: {e}")
-        map50_95, map50, precision, recall = 'Error', 'Error', 'Error', 'Error'
+        map50_95, map50, precision, recall = -1, -1, -1, -1
 
     # 5. 汇总结果
     result_dict = {
         'Experiment': experiment_name,
-        'Params (M)': params_m,
-        'GFLOPs': gflops,
+        'Params (M)': params_m if params_m != 'N/A' else -1,
+        'GFLOPs': gflops if gflops != 'N/A' else -1,
         'mAP50-95': map50_95,
         'mAP50': map50,
         'Precision': precision,
@@ -156,7 +162,7 @@ def main():
     """
     主函数，遍历所有实验并生成报告。
     """
-    print("Starting evaluation of ConvNeXt-YOLO models...")
+    print("Starting evaluation of custom YOLO models...")
 
     # 检查数据集配置文件是否存在
     if not Path(DATASET_YAML_PATH).exists():
@@ -166,7 +172,12 @@ def main():
 
     # 查找所有匹配的实验目录
     base_path = Path(RUNS_DIR)
-    experiment_paths = sorted(list(base_path.glob(EXPERIMENT_PATTERN)))
+
+    experiment_paths = []
+    for pattern in EXPERIMENT_PATTERNS:
+        experiment_paths.extend(base_path.glob(pattern))
+
+    experiment_paths = sorted(list(set(experiment_paths)))  # 去重并排序
 
     if not experiment_paths:
         print(f"[X] No experiment directories found matching pattern '{EXPERIMENT_PATTERN}' in '{RUNS_DIR}'")
@@ -189,23 +200,53 @@ def main():
     print("\n\n" + "=" * 20 + " FINAL EVALUATION SUMMARY " + "=" * 20)
     df = pd.DataFrame(all_results)
 
+    df_display = df.copy()
+    numeric_cols = ['Params (M)', 'GFLOPs', 'mAP50-95', 'mAP50', 'Precision', 'Recall']
     # 优化列的顺序
     column_order = [
         'Experiment', 'Params (M)', 'GFLOPs', 'mAP50-95', 'mAP50',
         'Precision', 'Recall', 'Epochs', 'ImgSize', 'BatchSize', 'Optimizer', 'Initial LR'
     ]
-    df = df[column_order]
+    for col in numeric_cols:
+        if col in df_display.columns:
+            df_display[col] = df_display[col].apply(lambda x: 'N/A' if x == -1 else x)
+    # 排序：只对有效结果进行排序（mAP50-95 >= 0）
+    valid_results = df[df['mAP50-95'] >= 0]
+    failed_results = df[df['mAP50-95'] < 0]
 
-    # 按mAP50-95降序排序，方便查看最佳模型
-    df_sorted = df.sort_values(by='mAP50-95', ascending=False).reset_index(drop=True)
 
-    # 使用 to_string() 打印完整的DataFrame，防止列被截断
-    print(df_sorted.to_string())
+    if not valid_results.empty:
+        valid_sorted = valid_results.sort_values(by='mAP50-95', ascending=False).reset_index(drop=True)
+        if not failed_results.empty:
+            df_final = pd.concat([valid_sorted, failed_results], ignore_index=True)
+        else:
+            df_final = valid_sorted
+    else:
+        df_final = failed_results
+
+    # 创建显示用的DataFrame
+    df_display_final = df_final.copy()
+    for col in numeric_cols:
+        if col in df_display_final.columns:
+            df_display_final[col] = df_display_final[col].apply(lambda x: 'N/A' if x == -1 else x)
+
+    column_order = [
+        'Experiment', 'Params (M)', 'GFLOPs', 'mAP50-95', 'mAP50',
+        'Precision', 'Recall', 'Epochs', 'ImgSize', 'BatchSize', 'Optimizer', 'Initial LR'
+    ]
+    df_display_final = df_display_final[column_order]
+
+    print(df_display_final.to_string())
 
     # 8. 保存到CSV文件
     try:
-        df_sorted.to_csv(OUTPUT_CSV_FILE, index=False)
+        df_display.to_csv(OUTPUT_CSV_FILE, index=False)
         print(f"\n[✔] Summary successfully saved to '{OUTPUT_CSV_FILE}'")
+
+        valid_count = len(valid_results)
+        failed_count = len(failed_results)
+        print(f"\n[ℹ] Summary: {valid_count} successful evaluations, {failed_count} failed (missing custom modules)")
+
     except Exception as e:
         print(f"\n[!] Error saving summary to CSV: {e}")
 
