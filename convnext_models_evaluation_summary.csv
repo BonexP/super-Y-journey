@@ -1,0 +1,12 @@
+Experiment,Params (M),GFLOPs,mAP50-95,mAP50,Precision,Recall,Epochs,ImgSize,BatchSize,Optimizer,Initial LR
+baseline_yolo11_custom_CBAM,10.25,10.79,0.5563,0.8364,0.8132,0.7772,300,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt,9.09,10.18,0.3746,0.7319,0.6898,0.664,20,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_300epoch,9.09,10.18,0.5365,0.8444,0.8142,0.803,300,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v2,10.03,10.78,0.3379,0.6847,0.6412,0.6324,20,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v2_300epoch,10.03,10.78,0.5401,0.8523,0.8286,0.8077,300,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v3,8.79,9.27,0.3458,0.7013,0.659,0.6393,20,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v3_300epoch,8.79,9.27,0.5322,0.8413,0.8383,0.751,300,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v4,9.39,10.24,0.5321,0.8451,0.8161,0.7866,300,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v5,13.95,16.03,0.3506,0.7036,0.6184,0.6289,20,640,16,Adam,0.001
+baseline_yolo11_custom_ConvNeXt_v5_300epoch,13.95,16.03,0.5262,0.8466,0.8239,0.786,300,640,16,Adam,0.001
+baseline_yolo11_test_lowlr,9.43,10.78,0.5579,0.85,0.8346,0.7893,300,640,16,Adam,0.001

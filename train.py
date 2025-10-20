@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 from ultralytics import YOLO
 
@@ -37,14 +38,31 @@ if __name__ == '__main__':
     args = parse_args()
     save_dir = Path(args.project) / args.name
     save_dir.mkdir(parents=True, exist_ok=True)
+    # 设置环境变量强制使用单GPU
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
+    #check CUDA
+    import torch
+    print("CUDA Available: ", torch.cuda.is_available())
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    print(f'Using device: {device}')
+    # torch.set_default_device('cuda' if torch.cuda.is_available() else 'cpu')
+    # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
     # 加载模型
     # 这里直接使用本地Ultralytics库中自带的配置文件
     # yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
-    custom_yaml= 'ultralytics/cfg/models/11/yolo11s_CBAM.yaml'
-    model = YOLO(custom_yaml)
+    custom_yaml= 'ultralytics/cfg/models/v8/yolov8.yaml'
+
+    with torch.cuda.device(0):
+        torch.cuda.set_device(0)
+        model = YOLO(custom_yaml)  # 使用修改后的模型配置文件
+
+
     with open(custom_yaml, 'r', encoding='utf-8') as f:
         yaml_content = f.read()
     print("YAML 文件正文如下：\n" + yaml_content)
@@ -87,5 +105,7 @@ if __name__ == '__main__':
         patience=50,                  # 早停轮数
         save_period=10,               # 模型保存周期
         amp=True,                     # 启用自动混合精度
+        device=0,                 # 使用的设备
+        workers=4                     # 数据加载线程数
     )
     print(f"Training complete. Results saved to: {save_dir}")

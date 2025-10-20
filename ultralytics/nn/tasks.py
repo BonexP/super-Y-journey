@@ -96,6 +96,9 @@ from ultralytics.utils.torch_utils import (
 
 from .modules  import ConvNeXt, Block, ConvNeXtBackbone,LayerNorm
 
+#CARAFE
+from .modules import CarafeUp
+
 class BaseModel(torch.nn.Module):
     """
     Base class for all YOLO models in the Ultralytics family.
@@ -1650,6 +1653,7 @@ def parse_model(d, ch, verbose=True):
             Block, # ConvNeXt Block
             ConvNeXt, # ConvNeXt model
             LayerNorm, # ConvNeXt LayerNorm
+            CarafeUp # Carafe upsample
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1709,6 +1713,8 @@ def parse_model(d, ch, verbose=True):
             if m is ConvNeXt:
                # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
              args = [c1, args[0], *args[1:]]
+            if m is CarafeUp:
+                args = [c1]
             elif m is Block:
                 # args格式: [dim, drop_path, layer_scale_init_value]
                 args = [c1, *args]

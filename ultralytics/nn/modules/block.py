@@ -11,6 +11,7 @@ from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
 from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .transformer import TransformerBlock
+from carafe import CARAFEPack
 
 __all__ = (
     "DFL",
@@ -2031,3 +2032,53 @@ class SAVPE(nn.Module):
         aggregated = score.transpose(-2, -3) @ x.reshape(B, self.c, C // self.c, -1).transpose(-1, -2)
 
         return F.normalize(aggregated.transpose(-2, -3).reshape(B, Q, -1), dim=-1, p=2)
+
+
+# 你可以把它放到 common.py 里与其它模块一起
+class CarafeUp(nn.Module):
+    def __init__(self,
+                 c1, # 输入通道数
+                 c2=None, # 输出通道数，默认为 None，表示与输入通道数相同
+                 scale_factor=2,
+                 up_kernel=5,
+                 up_group=1,
+                 encoder_kernel=3,
+                 encoder_dilation=1,
+                 compressed_ratio=2):
+        super().__init__()
+
+        if c2 is None:
+            c2 = c1
+        self.c1=c1
+        self.c2=c2
+
+        if c1 != c2:
+            self.channel_adjust = Conv(c1, c2, 1, 1)
+        else:
+            self.channel_adjust = None
+
+        compressed_channels = max(8, c2 // compressed_ratio)
+        self.carafe = CARAFEPack(
+            channels=c2, # 输出通道数
+            scale_factor=scale_factor,
+            up_kernel=up_kernel,
+            up_group=up_group,
+            encoder_kernel=encoder_kernel,
+            encoder_dilation=encoder_dilation,
+            compressed_channels=compressed_channels
+        )
+        # self.carafe.cuda()
+
+    def forward(self, x):
+        print("torch.cuda.is_available():", torch.cuda.is_available(),"x.device:",x.device,"self.carafe.device:",next(self.carafe.parameters()).device)
+        if torch.cuda.is_available() and not x.is_cuda:
+            # pass
+            x = x.cuda()
+            # 确保 CARAFE 模块也在同一设备上
+        if torch.cuda.is_available() and not next(self.carafe.parameters()).is_cuda:
+            self.carafe = self.carafe.cuda()
+            # pass
+        if self.channel_adjust is not None:
+            x = self.channel_adjust(x)
+        print("x.device:",x.device,"self.carafe.device:",next(self.carafe.parameters()).device)
+        return self.carafe(x)
