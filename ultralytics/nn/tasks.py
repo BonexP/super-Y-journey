@@ -93,8 +93,8 @@ from ultralytics.utils.torch_utils import (
     time_sync,
 )
 
+from .modules import Block, ConvNeXt, LayerNorm
 
-from .modules  import ConvNeXt, Block, ConvNeXtBackbone,LayerNorm
 
 class BaseModel(torch.nn.Module):
     """
@@ -1647,9 +1647,9 @@ def parse_model(d, ch, verbose=True):
             C2fCIB,
             A2C2f,
             # add ConvNeXt modules
-            Block, # ConvNeXt Block
-            ConvNeXt, # ConvNeXt model
-            LayerNorm, # ConvNeXt LayerNorm
+            Block,  # ConvNeXt Block
+            ConvNeXt,  # ConvNeXt model
+            LayerNorm,  # ConvNeXt LayerNorm
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1707,8 +1707,8 @@ def parse_model(d, ch, verbose=True):
             if m is C2fCIB:
                 legacy = False
             if m is ConvNeXt:
-               # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
-             args = [c1, args[0], *args[1:]]
+                # args格式: [in_chans, num_classes, depths, dims, drop_path_rate, layer_scale_init_value]
+                args = [c1, args[0], *args[1:]]
             elif m is Block:
                 # args格式: [dim, drop_path, layer_scale_init_value]
                 args = [c1, *args]
