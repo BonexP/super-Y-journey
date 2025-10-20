@@ -76,6 +76,10 @@ from .conv import (
     RepConv,
     SpatialAttention,
 )
+from .convnext import Block, ConvNeXt, LayerNorm
+
+# 在ultralytics/nn/modules/__init__.py中添加
+from .convnext_backbone import ConvNeXtBackbone
 from .head import (
     OBB,
     Classify,
@@ -101,10 +105,6 @@ from .transformer import (
     TransformerEncoderLayer,
     TransformerLayer,
 )
-# 在ultralytics/nn/modules/__init__.py中添加
-from .convnext_backbone import ConvNeXtBackbone
-from .convnext import ConvNeXt, Block,LayerNorm
-
 
 __all__ = (
     "Conv",
