@@ -5,6 +5,7 @@
 set -euo pipefail
 
 # 显示帮助文档
+
 show_help() {
     cat << EOF
 YOLO 模型训练脚本
@@ -60,11 +61,13 @@ YOLO 模型训练脚本
     - 可以安全关闭终端，训练会继续进行
     - 使用 tail -f <name>.log 查看实时日志
 
+
 EOF
 }
 
 # 检查是否至少有一个参数（name）
 if [[ $# -lt 1 ]]; then
+
     show_help
     exit 1
 fi

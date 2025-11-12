@@ -1,6 +1,4 @@
-
 # My Baseline
-
 # Parameters
 nc: 6 # number of classes
 scales: # model compound scaling constants, i.e. 'model=yolo11n.yaml' will call yolo11.yaml with scale 'n'
