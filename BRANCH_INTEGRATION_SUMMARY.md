@@ -5,7 +5,9 @@
 经过详细分析，BonexP/super-Y-journey 仓库包含 **11个活跃分支**，这些分支可以分为三大类：
 
 ### 1. 依赖更新分支（6个）- **可立即合并**
+
 由 Dependabot 自动创建，包含依赖项的版本更新：
+
 - `dependabot/github_actions/dot-github/workflows/actions/checkout-5`
 - `dependabot/github_actions/dot-github/workflows/actions/download-artifact-5`
 - `dependabot/github_actions/dot-github/workflows/actions/setup-python-6`
@@ -20,12 +22,14 @@
 ### 2. 功能开发分支（4个）- **需要谨慎处理**
 
 #### 2.1 dev-CARAFE（CARAFE上采样模块）
+
 - **状态**: 领先1个提交，不落后
 - **变更**: 11个文件，新增CARAFE模块实现
 - **风险**: 低
 - **建议**: 可以直接合并到main
 
 #### 2.2 SIoU、dev、dev-CBAM、test-custom-yaml
+
 - **状态**: 领先2800+个提交，落后1个提交
 - **关键问题**: **这些分支与main分支没有共同的历史基础**（no merge base）
 
@@ -36,6 +40,7 @@
 ### 为什么会出现"无变更"但有大量提交？
 
 经过深入分析发现：
+
 1. **main 分支**: 只有1个提交（f480af5），使用了 `--graft` 选项，这意味着它是一个浅克隆或被重写过的历史
 2. **SIoU、dev、dev-CBAM、test-custom-yaml分支**: 包含完整的 ultralytics 项目历史（约2800+个提交）
 3. **结果**: 这些分支之间没有共同的提交历史，无法进行传统的合并
@@ -43,6 +48,7 @@
 ### 实际情况
 
 这些功能分支实际上包含了：
+
 - 完整的 Ultralytics YOLO 项目代码
 - 在此基础上的特定功能改进（SIoU、CARAFE、CBAM等）
 
@@ -70,15 +76,17 @@ git merge SIoU --no-ff
 # 4. 用new-main替换main
 git branch -D main
 git branch -m new-main main
-git push origin main --force  # 需要管理员权限
+git push origin main --force # 需要管理员权限
 ```
 
-**优点**: 
+**优点**:
+
 - 保留完整项目历史
 - 所有功能可以集成
 - 符合开源项目最佳实践
 
-**缺点**: 
+**缺点**:
+
 - 需要强制推送（可能需要临时禁用分支保护）
 - 会改变main的历史
 
@@ -103,10 +111,12 @@ git commit -m "Add SIoU loss function from SIoU branch"
 ```
 
 **优点**:
+
 - 不改变main的历史
 - 更精确的控制
 
 **缺点**:
+
 - 工作量大，容易出错
 - 丢失提交历史
 - 需要手动解决所有冲突
@@ -146,12 +156,14 @@ git push origin --delete dependabot/<分支名>
 ## 详细执行计划
 
 ### 第一阶段：准备工作（1天）
+
 - [ ] 备份仓库（创建 backup 分支或fork）
 - [ ] 与团队确认集成策略
 - [ ] 准备测试环境
 - [ ] 记录当前各分支的状态
 
 ### 第二阶段：依赖更新（1-2天）
+
 - [ ] 合并 dependabot/github_actions/actions/checkout-5
 - [ ] 合并 dependabot/github_actions/actions/download-artifact-5
 - [ ] 合并 dependabot/github_actions/actions/setup-python-6
@@ -162,18 +174,21 @@ git push origin --delete dependabot/<分支名>
 - [ ] 验证所有 GitHub Actions 工作流
 
 ### 第三阶段：功能分支集成（3-5天）
+
 根据选择的方案：
 
 **如果选择方案A**:
+
 - [ ] 创建 new-main 基于 dev 分支
 - [ ] 合并 dev-CARAFE 到 new-main
-- [ ] 合并 dev-CBAM 到 new-main  
+- [ ] 合并 dev-CBAM 到 new-main
 - [ ] 合并 SIoU 到 new-main
 - [ ] 评估 test-custom-yaml 并决定是否集成
 - [ ] 完整测试
 - [ ] 用 new-main 替换 main
 
 **如果选择方案B**:
+
 - [ ] 合并 dev-CARAFE 到 main
 - [ ] 手动移植 SIoU 功能
 - [ ] 手动移植 CBAM 功能
@@ -181,6 +196,7 @@ git push origin --delete dependabot/<分支名>
 - [ ] 每次移植后运行测试
 
 ### 第四阶段：验证和清理（1-2天）
+
 - [ ] 运行完整的测试套件
 - [ ] 验证所有功能正常工作
 - [ ] 更新文档和 README
@@ -191,11 +207,13 @@ git push origin --delete dependabot/<分支名>
 ## 风险评估
 
 ### 高风险项
+
 1. **历史冲突**: SIoU、dev、dev-CBAM、test-custom-yaml 分支与 main 没有共同历史
 2. **强制推送**: 方案A需要强制推送到 main，可能影响其他协作者
 3. **功能冲突**: 不同分支可能修改了相同的文件
 
 ### 缓解措施
+
 1. 在操作前创建完整备份
 2. 使用临时分支进行集成测试
 3. 每次合并后立即测试
@@ -208,7 +226,7 @@ git push origin --delete dependabot/<分支名>
 
 - [ ] 代码风格检查（linting）
 - [ ] 单元测试
-- [ ] 集成测试  
+- [ ] 集成测试
 - [ ] 功能验证测试
 - [ ] 性能测试（如适用）
 - [ ] 文档构建测试
@@ -228,7 +246,7 @@ git push origin --delete dependabot/<分支名>
 
 - **方案A**: 5-7个工作日
   - 准备: 1天
-  - 依赖更新: 1-2天  
+  - 依赖更新: 1-2天
   - 功能集成: 2-3天
   - 测试验证: 1-2天
 
@@ -248,6 +266,7 @@ git push origin --delete dependabot/<分支名>
 ## 联系和支持
 
 如有疑问或需要帮助，请：
+
 - 查看详细报告: `BRANCH_ANALYSIS_REPORT.md`
 - 在仓库中创建 Issue 讨论
 - 联系项目维护者
