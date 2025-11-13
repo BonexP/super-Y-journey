@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--augment', action='store_true',
                         help='启用数据增强 (默认: False)')
 
-# 细分的数据增强参数（默认值为启用增强时的推荐值）
+    # 细分的数据增强参数（默认值为启用增强时的推荐值）
     parser.add_argument('--auto-augment', type=str, default='randaugment',
                         help='自动增强策略 (默认: randaugment, 仅在 --augment 启用时生效)')
     parser.add_argument('--mosaic', type=float, default=1.0,
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
-    custom_yaml= 'ultralytics/cfg/models/11/yolo11s_CBAM.yaml'
+    custom_yaml= 'ultralytics/cfg/models/11/yolo11s.yaml'
     model = YOLO(custom_yaml)
     with open(custom_yaml, 'r', encoding='utf-8') as f:
         yaml_content = f.read()
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     # model = YOLO('./yolo11s.pt')
 
     # (可选) 如果需要修改模型配置文件，可以在这里加载修改后的配置
-    # model=YOLO(args.model)  # 使用修改后的模型配置文件
+    #model=YOLO(args.model)  # 使用修改后的模型配置文件
 
     # 根据 --augment 参数决定增强配置
     if args.augment:
