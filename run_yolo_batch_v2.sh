@@ -84,6 +84,9 @@ if [[ ${#TASKS[@]} -eq 0 ]]; then
     exit 1
 fi
 
+
+# 替换命令中的 TOTAL_TASKS
+TOTAL_TASKS=${#TASKS[@]}
 # 构建串行训练命令（用 && 连接，添加日志分隔符）
 TRAIN_COMMANDS=""
 for i in "${!TASKS[@]}"; do
@@ -117,9 +120,7 @@ for i in "${!TASKS[@]}"; do
     fi
 done
 
-# 替换命令中的 TOTAL_TASKS
-TOTAL_TASKS=${#TASKS[@]}
-TRAIN_COMMANDS="${TRAIN_COMMANDS//\$TOTAL_TASKS/$TOTAL_TASKS}"
+#TRAIN_COMMANDS="${TRAIN_COMMANDS//\$TOTAL_TASKS/$TOTAL_TASKS}"
 
 # 打印执行信息
 echo "========================================="
