@@ -28,6 +28,34 @@ transform = A.Compose([
 ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
 
 
+def normalize_bbox(bbox):
+    """
+    标准化边界框坐标，确保所有值都在[0.0, 1.0]范围内。
+    处理由于浮点精度问题导致的微小越界值。
+    """
+    x_center, y_center, w, h = bbox
+    # 将负的极小值修正为0，大于1的极小越界值修正为1
+    x_center = max(0.0, min(1.0, x_center))
+    y_center = max(0.0, min(1.0, y_center))
+    w = max(0.0, min(1.0, w))
+    h = max(0.0, min(1.0, h))
+
+    # 确保边界框不会超出图像边界
+    # x_center - w/2 >= 0 and x_center + w/2 <= 1
+    if x_center - w/2 < 0:
+        x_center = w/2
+    if x_center + w/2 > 1:
+        x_center = 1 - w/2
+
+    # y_center - h/2 >= 0 and y_center + h/2 <= 1
+    if y_center - h/2 < 0:
+        y_center = h/2
+    if y_center + h/2 > 1:
+        y_center = 1 - h/2
+
+    return [x_center, y_center, w, h]
+
+
 def augment_dataset(original_train_img_dir, original_train_label_dir, output_img_dir, output_label_dir, multiplier):
     """
     增强数据集：对每个原始图像生成多个增强版本。
@@ -59,7 +87,9 @@ def augment_dataset(original_train_img_dir, original_train_label_dir, output_img
                         y_center = float(parts[2])
                         w = float(parts[3])
                         h = float(parts[4])
-                        bboxes.append([x_center, y_center, w, h])
+                        # 标准化边界框坐标
+                        normalized_bbox = normalize_bbox([x_center, y_center, w, h])
+                        bboxes.append(normalized_bbox)
                         class_labels.append(class_id)
 
         # 保存原始图像和标注到输出目录（作为基础）
