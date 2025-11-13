@@ -6,7 +6,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
     parser.add_argument('--cfg', type=str, default='/home/user/PROJECT/FSWD/FSW-MERGE/data.yaml',
                         help='数据集配置文件路径')
-    parser.add_argument('--model', type=str, default='./modified_yolo11s.yaml',
+    parser.add_argument('--model', type=str, default='ultralytics/cfg/models/11/yolo11s.yaml',
                         help='模型配置文件路径')
     parser.add_argument('--epochs', type=int, default=300, help='训练 epochs')
     # 允许 -1 自动探测最大 batch
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     save_dir = Path(args.project) / args.name
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    custom_yaml = 'ultralytics/cfg/models/11/yolo11s.yaml'
+    custom_yaml = args.model
     model = YOLO(custom_yaml)
     with open(custom_yaml, 'r', encoding='utf-8') as f:
         print("YAML 文件正文如下：\n" + f.read())
