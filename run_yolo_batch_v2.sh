@@ -119,8 +119,30 @@ done
 
 # 替换命令中的 TOTAL_TASKS
 TOTAL_TASKS=${#TASKS[@]}
-TRAIN_COMMANDS="${TRAIN_COMMANDS//\$TOTAL_TASKS/$TOTAL_TASKS}"
 
+TRAIN_COMMANDS=""
+for i in "${!TASKS[@]}"; do
+    TASK_NUM=$((i + 1))
+    TASK_ARGS="${TASKS[$i]}"
+
+    if [[ ! "$TASK_ARGS" =~ --name ]]; then
+        echo "❌ 错误：任务 $TASK_NUM 缺少 --name 参数"
+        echo "   任务参数：$TASK_ARGS"
+        exit 1
+    fi
+
+    TASK_NAME=$(echo "$TASK_ARGS" | grep -oP '(?<=--name )[^ ]+' || echo "task_$TASK_NUM")
+
+    TASK_CMD="echo ''; echo '══════════════════════════════════════════════════════════════'; echo '🚀 [任务 $TASK_NUM/$TOTAL_TASKS] 开始: $TASK_NAME'; echo '开始时间: '\$(date '+%F %T'); echo '任务参数: python train.py $TASK_ARGS'; echo '══════════════════════════════════════════════════════════════'; echo ''"
+    TASK_CMD="$TASK_CMD && TASK_START=\$(date +%s) && python train.py $TASK_ARGS"
+    TASK_CMD="$TASK_CMD && TASK_END=\$(date +%s) && TASK_DURATION=\$((TASK_END - TASK_START)) && echo '' && echo '══════════════════════════════════════════════════════════════' && echo '✅ [任务 $TASK_NUM/$TOTAL_TASKS] 完成: $TASK_NAME' && echo '结束时间: '\$(date '+%F %T') && echo '耗时: '\$TASK_DURATION' 秒 ('\$((TASK_DURATION / 60))' 分钟)' && echo '══════════════════════════════════════════════════════════════' && echo ''"
+
+    if [[ $i -eq 0 ]]; then
+        TRAIN_COMMANDS="$TASK_CMD"
+    else
+        TRAIN_COMMANDS="$TRAIN_COMMANDS && $TASK_CMD"
+    fi
+done
 # 打印执行信息
 echo "========================================="
 echo "[$(date '+%F %T')] 启动批量串行训练"
