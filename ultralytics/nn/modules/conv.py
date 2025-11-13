@@ -634,6 +634,7 @@ class CBAM(nn.Module):
             c1 (int): Number of input channels.
             kernel_size (int): Size of the convolutional kernel for spatial attention.
         """
+        print("CBAM attention module initialized with kernel size:", kernel_size)
         super().__init__()
         self.channel_attention = ChannelAttention(c1)
         self.spatial_attention = SpatialAttention(kernel_size)

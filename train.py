@@ -27,6 +27,37 @@ def parse_args():
                         help='权重衰减 (weight decay) (默认: 0.0005)')
     parser.add_argument('--momentum', type=float, default=0.937,
                         help='优化器动量 (momentum) (默认: 0.937)')
+
+    # 数据增强总开关
+    parser.add_argument('--augment', action='store_true',
+                        help='启用数据增强 (默认: False)')
+
+# 细分的数据增强参数（默认值为启用增强时的推荐值）
+    parser.add_argument('--auto-augment', type=str, default='randaugment',
+                        help='自动增强策略 (默认: randaugment, 仅在 --augment 启用时生效)')
+    parser.add_argument('--mosaic', type=float, default=1.0,
+                        help='mosaic 数据增强概率 (默认: 1.0, 仅在 --augment 启用时生效)')
+    parser.add_argument('--mixup', type=float, default=0.2,
+                        help='mixup 数据增强概率 (默认: 0.2, 仅在 --augment 启用时生效)')
+    parser.add_argument('--hsv-h', type=float, default=0.015,
+                        help='HSV 色调增强幅度 (默认: 0.015, 仅在 --augment 启用时生效)')
+    parser.add_argument('--hsv-s', type=float, default=0.7,
+                        help='HSV 饱和度增强幅度 (默认: 0.7, 仅在 --augment 启用时生效)')
+    parser.add_argument('--hsv-v', type=float, default=0.4,
+                        help='HSV 明度增强幅度 (默认: 0.4, 仅在 --augment 启用时生效)')
+    parser.add_argument('--translate', type=float, default=0.1,
+                        help='平移增强幅度 (默认: 0.1, 仅在 --augment 启用时生效)')
+    parser.add_argument('--scale', type=float, default=0.5,
+                        help='尺度缩放增强幅度 (默认: 0.5, 仅在 --augment 启用时生效)')
+    parser.add_argument('--fliplr', type=float, default=0.5,
+                        help='水平翻转概率 (默认: 0.5, 仅在 --augment 启用时生效)')
+    parser.add_argument('--erasing', type=float, default=0.4,
+                        help='随机擦除概率 (默认: 0.4, 仅在 --augment 启用时生效)')
+    parser.add_argument('--warmup-epochs', type=int, default=5,
+                        help='预热轮数 (默认: 5)')
+    parser.add_argument('--close-mosaic', type=int, default=10,
+                        help='关闭 mosaic 数据增强的轮数 (默认: 10)')
+
     parser.add_argument('--project', type=str, default='runs/train',
                         help='实验结果保存目录 (默认: runs/train)')
     parser.add_argument('--name', type=str, default='baseline_yolo11',
@@ -43,7 +74,7 @@ if __name__ == '__main__':
     # yolo11_baseline = 'ultralytics/cfg/models/11/yolo11.yaml'  # YOLO11 基线模型配置文件路径
 
     # 使用配置文件初始化模型（不加载预训练权重）
-    custom_yaml= 'ultralytics/cfg/models/11/yolo11s.yaml'
+    custom_yaml= 'ultralytics/cfg/models/11/yolo11s_CBAM.yaml'
     model = YOLO(custom_yaml)
     with open(custom_yaml, 'r', encoding='utf-8') as f:
         yaml_content = f.read()
@@ -56,36 +87,63 @@ if __name__ == '__main__':
     # (可选) 如果需要修改模型配置文件，可以在这里加载修改后的配置
     # model=YOLO(args.model)  # 使用修改后的模型配置文件
 
+    # 根据 --augment 参数决定增强配置
+    if args.augment:
+        # 启用增强：使用命令行参数值（或默认的推荐值）
+        augment_config = {
+            'augment': True,
+            'auto_augment': args.auto_augment,
+            'mosaic': args.mosaic,
+            'mixup': args.mixup,
+            'hsv_h': args.hsv_h,
+            'hsv_s': args.hsv_s,
+            'hsv_v': args.hsv_v,
+            'translate': args.translate,
+            'scale': args.scale,
+            'fliplr': args.fliplr,
+            'erasing': args.erasing,
+        }
+        print("✅ 数据增强已启用，配置如下：")
+        for key, value in augment_config.items():
+            print(f"  {key}: {value}")
+    else:
+        # 关闭增强：所有参数设为 0 或 None
+        augment_config = {
+            'augment': False,
+            'auto_augment': None,
+            'mosaic': 0.0,
+            'mixup': 0.0,
+            'hsv_h': 0.0,
+            'hsv_s': 0.0,
+            'hsv_v': 0.0,
+            'translate': 0.0,
+            'scale': 0.0,
+            'fliplr': 0.0,
+            'erasing': 0.0,
+        }
+        print("❌ 数据增强已关闭")
+
     # 开始训练
     model.train(
-        data=args.cfg,                # 数据集配置文件路径
-        imgsz=args.img_size,          # 输入图片尺寸
-        epochs=args.epochs,           # 训练轮数
-        batch=args.batch_size,        # 批次大小
-        lr0=args.lr0,                 # 初始学习率
-        weight_decay=args.weight_decay, # 权重衰减
-        momentum=args.momentum,       # 优化器动量
-        optimizer=args.optimizer,     # 优化器类型
-        project=args.project,         # 实验结果保存主目录
-        name=args.name,               # 实验名称
-        exist_ok=True,                # 允许已存在的目录
-        # 数据增强参数
-        augment=True,                 # 启用数据增强
-        auto_augment='randaugment', # 使用 RandAugment 数据增强
-        mosaic=1.0,                   # mosaic 数据增强概率
-        mixup=0.2,                    # mixup 数据增强概率
-        hsv_h=0.015,                  # HSV 色调增强幅度
-        hsv_s=0.7,                    # HSV 饱和度增强幅度
-        hsv_v=0.4,                    # HSV 明度增强幅度
-        translate=0.1,                # 平移增强幅度
-        scale=0.5,                    # 尺度缩放增强幅度
-        fliplr=0.5,                   # 水平翻转概率
-        erasing=0.4,                   # 随机擦除概率
-        warmup_epochs=5,               # 增加预热轮数
-        close_mosaic=10,              # 关闭 mosaic 数据增强的轮数
+        data=args.cfg,
+        imgsz=args.img_size,
+        epochs=args.epochs,
+        batch=args.batch_size,
+        lr0=args.lr0,
+        weight_decay=args.weight_decay,
+        momentum=args.momentum,
+        optimizer=args.optimizer,
+        project=args.project,
+        name=args.name,
+        exist_ok=True,
+        # 展开增强配置字典
+        **augment_config,
+        # 这两个参数不受总开关控制
+        warmup_epochs=args.warmup_epochs,
+        close_mosaic=args.close_mosaic,
         # 早停与 checkpoint
-        patience=50,                  # 早停轮数
-        save_period=10,               # 模型保存周期
-        amp=True,                     # 启用自动混合精度
+        patience=50,
+        save_period=10,
+        amp=True,
     )
     print(f"Training complete. Results saved to: {save_dir}")
