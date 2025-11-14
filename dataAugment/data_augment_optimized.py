@@ -32,18 +32,21 @@ transform = A.Compose([
     A.HorizontalFlip(p=0.5),
     A.RandomRotate90(p=0.3),  # 如果你的焊接数据有旋转对称性
 
-    # Step 3: Dropout/遮挡增强（高影响力！强制学习多样化特征）
+    # Step 3: Dropout/遮挡增强 遮挡增强：使用 CoarseDropout 统一替代 CutOut/Random Erasing
     A.OneOf([
         A.CoarseDropout(
-            max_holes=8,
-            max_height=32,
-            max_width=32,
-            fill_value=0,
+            num_holes_range=(3, 6),
+            hole_height_range=(10, 32),    # 像素范围
+            hole_width_range=(10, 32),
+            fill="random_uniform",
             p=1.0
         ),
-        A.RandomErasing(
-            scale=(0.02, 0.1),
-            ratio=(0.3, 3.3),
+        # 单孔 + 固定黑色填充，模拟经典 CutOut（大小按比例）
+        A.CoarseDropout(
+            num_holes_range=(1, 1),
+            hole_height_range=(0.08, 0.12),  # 按图像尺寸的比例
+            hole_width_range=(0.08, 0.12),
+            fill=0,
             p=1.0
         ),
     ], p=0.5),
