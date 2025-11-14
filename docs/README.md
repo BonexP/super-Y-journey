@@ -11,6 +11,20 @@ Welcome to Ultralytics Docs, your comprehensive resource for understanding and u
 
 <a href="https://discord.com/invite/ultralytics"><img alt="Discord" src="https://img.shields.io/discord/1089800235347353640?logo=discord&logoColor=white&label=Discord&color=blue"></a> <a href="https://community.ultralytics.com/"><img alt="Ultralytics Forums" src="https://img.shields.io/discourse/users?server=https%3A%2F%2Fcommunity.ultralytics.com&logo=discourse&label=Forums&color=blue"></a> <a href="https://www.reddit.com/r/ultralytics/"><img alt="Ultralytics Reddit" src="https://img.shields.io/reddit/subreddit-subscribers/ultralytics?style=flat&logo=reddit&logoColor=white&label=Reddit&color=blue"></a>
 
+## 📖 Custom Documentation
+
+### 🏗️ YOLO Model Architecture Guide (中文)
+
+Comprehensive guide for modifying and customizing YOLO model architecture, including:
+- How to modify convolutional layer implementations
+- How to add attention mechanisms
+- Understanding model organization and code structure
+- Step-by-step practical examples
+
+**[📚 Read the Model Architecture Guide →](./model-architecture-guide/README.md)**
+
+---
+
 ## 🛠️ Installation
 
 [![PyPI - Version](https://img.shields.io/pypi/v/ultralytics?logo=pypi&logoColor=white)](https://pypi.org/project/ultralytics/)
