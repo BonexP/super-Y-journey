@@ -8,16 +8,16 @@ YOLO模型已经内置了多种注意力机制，我们将学习如何使用它�
 
 ### 现有的注意力机制
 
-| 注意力类型 | 文件位置 | 主要用途 |
-|-----------|---------|---------|
-| ChannelAttention | conv.py 第261行 | 通道注意力（类似SENet） |
-| SpatialAttention | conv.py 第291行 | 空间注意力 |
-| CBAM | conv.py 第330行 | 通道+空间注意力 |
-| PSA | block.py 第1854行 | Position-Sensitive Attention |
-| C2fAttn | block.py 第305行 | 带注意力的C2f模块 |
-| ImagePoolingAttn | block.py 第346行 | 图像池化注意力 |
-| TransformerBlock | transformer.py 第142行 | Self-attention机制 |
-| AIFI | transformer.py 第181行 | 注意力特征融合 |
+| 注意力类型       | 文件位置               | 主要用途                     |
+| ---------------- | ---------------------- | ---------------------------- |
+| ChannelAttention | conv.py 第261行        | 通道注意力（类似SENet）      |
+| SpatialAttention | conv.py 第291行        | 空间注意力                   |
+| CBAM             | conv.py 第330行        | 通道+空间注意力              |
+| PSA              | block.py 第1854行      | Position-Sensitive Attention |
+| C2fAttn          | block.py 第305行       | 带注意力的C2f模块            |
+| ImagePoolingAttn | block.py 第346行       | 图像池化注意力               |
+| TransformerBlock | transformer.py 第142行 | Self-attention机制           |
+| AIFI             | transformer.py 第181行 | 注意力特征融合               |
 
 ---
 
@@ -47,25 +47,27 @@ class CBAM(nn.Module):
 **步骤2**: 在YAML配置中使用:
 
 **原始YOLOv8配置**:
+
 ```yaml
 backbone:
-  - [-1, 1, Conv, [64, 3, 2]]
-  - [-1, 1, Conv, [128, 3, 2]]
-  - [-1, 3, C2f, [128, True]]
-  - [-1, 1, Conv, [256, 3, 2]]
-  - [-1, 6, C2f, [256, True]]
+    - [-1, 1, Conv, [64, 3, 2]]
+    - [-1, 1, Conv, [128, 3, 2]]
+    - [-1, 3, C2f, [128, True]]
+    - [-1, 1, Conv, [256, 3, 2]]
+    - [-1, 6, C2f, [256, True]]
 ```
 
 **添加CBAM后**:
+
 ```yaml
 backbone:
-  - [-1, 1, Conv, [64, 3, 2]]
-  - [-1, 1, Conv, [128, 3, 2]]
-  - [-1, 3, C2f, [128, True]]
-  - [-1, 1, CBAM, [128]]              # 在C2f后添加CBAM
-  - [-1, 1, Conv, [256, 3, 2]]
-  - [-1, 6, C2f, [256, True]]
-  - [-1, 1, CBAM, [256]]              # 在C2f后添加CBAM
+    - [-1, 1, Conv, [64, 3, 2]]
+    - [-1, 1, Conv, [128, 3, 2]]
+    - [-1, 3, C2f, [128, True]]
+    - [-1, 1, CBAM, [128]] # 在C2f后添加CBAM
+    - [-1, 1, Conv, [256, 3, 2]]
+    - [-1, 6, C2f, [256, True]]
+    - [-1, 1, CBAM, [256]] # 在C2f后添加CBAM
 ```
 
 **注意**: CBAM不改变通道数，所以可以直接插入。
@@ -75,11 +77,13 @@ backbone:
 **C2fAttn** 是C2f的增强版本，内置了注意力机制。
 
 **原始**:
+
 ```yaml
 - [-1, 6, C2f, [512, True]]
 ```
 
 **替换为C2fAttn**:
+
 ```yaml
 # C2fAttn参数: [c2, n, ec, nh, gc, shortcut]
 # ec: embedding channels (128)
@@ -94,12 +98,13 @@ backbone:
 
 ```yaml
 backbone:
-  - [-1, 1, Conv, [256, 3, 2]]
-  - [-1, 6, C2f, [256, True]]
-  - [-1, 1, PSA, [256]]               # 添加PSA
+    - [-1, 1, Conv, [256, 3, 2]]
+    - [-1, 6, C2f, [256, True]]
+    - [-1, 1, PSA, [256]] # 添加PSA
 ```
 
 **PSA参数说明**:
+
 ```python
 PSA(c1, c2=None, e=0.5)
 # c1: 输入通道数
@@ -117,15 +122,12 @@ PSA(c1, c2=None, e=0.5)
 
 ```python
 class SEAttention(nn.Module):
+    """Squeeze-and-Excitation attention module. Paper: https://arxiv.org/abs/1709.01507.
     """
-    Squeeze-and-Excitation attention module.
-    Paper: https://arxiv.org/abs/1709.01507
-    """
-    
+
     def __init__(self, channels, reduction=16):
-        """
-        Initialize SE attention.
-        
+        """Initialize SE attention.
+
         Args:
             channels (int): Number of input channels
             reduction (int): Reduction ratio for bottleneck
@@ -136,9 +138,9 @@ class SEAttention(nn.Module):
             nn.Linear(channels, channels // reduction, bias=False),
             nn.ReLU(inplace=True),
             nn.Linear(channels // reduction, channels, bias=False),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
-    
+
     def forward(self, x):
         """Apply SE attention to input tensor."""
         b, c, _, _ = x.size()
@@ -177,9 +179,9 @@ __all__ = (
 
 ```yaml
 backbone:
-  - [-1, 1, Conv, [256, 3, 2]]
-  - [-1, 6, C2f, [256, True]]
-  - [-1, 1, SEAttention, [256, 16]]  # [channels, reduction]
+    - [-1, 1, Conv, [256, 3, 2]]
+    - [-1, 6, C2f, [256, True]]
+    - [-1, 1, SEAttention, [256, 16]] # [channels, reduction]
 ```
 
 ### 自定义注意力2: Efficient Channel Attention (ECA)
@@ -190,15 +192,12 @@ backbone:
 
 ```python
 class ECAAttention(nn.Module):
+    """Efficient Channel Attention. Paper: https://arxiv.org/abs/1910.03151.
     """
-    Efficient Channel Attention.
-    Paper: https://arxiv.org/abs/1910.03151
-    """
-    
+
     def __init__(self, channels, gamma=2, b=1):
-        """
-        Initialize ECA attention.
-        
+        """Initialize ECA attention.
+
         Args:
             channels (int): Number of input channels
             gamma (int): Parameter for adaptive kernel size
@@ -208,28 +207,29 @@ class ECAAttention(nn.Module):
         # 自适应计算卷积核大小
         t = int(abs((math.log(channels, 2) + b) / gamma))
         k_size = t if t % 2 else t + 1
-        
+
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
         self.sigmoid = nn.Sigmoid()
-    
+
     def forward(self, x):
         """Apply ECA attention to input tensor."""
         # Feature descriptor on the global spatial information
         y = self.avg_pool(x)
-        
+
         # Two different branches of ECA module
         y = self.conv(y.squeeze(-1).transpose(-1, -2)).transpose(-1, -2).unsqueeze(-1)
-        
+
         # Multi-scale information fusion
         y = self.sigmoid(y)
-        
+
         return x * y.expand_as(x)
 ```
 
 **需要在文件开头导入**:
+
 ```python
-import math
+
 ```
 
 ### 自定义注意力3: Coordinate Attention (CA)
@@ -240,15 +240,12 @@ import math
 
 ```python
 class CoordAttention(nn.Module):
+    """Coordinate Attention for efficient mobile network design. Paper: https://arxiv.org/abs/2103.02907.
     """
-    Coordinate Attention for efficient mobile network design.
-    Paper: https://arxiv.org/abs/2103.02907
-    """
-    
+
     def __init__(self, inp, oup, reduction=32):
-        """
-        Initialize Coordinate Attention.
-        
+        """Initialize Coordinate Attention.
+
         Args:
             inp (int): Input channels
             oup (int): Output channels
@@ -257,43 +254,43 @@ class CoordAttention(nn.Module):
         super().__init__()
         self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
         self.pool_w = nn.AdaptiveAvgPool2d((1, None))
-        
+
         mip = max(8, inp // reduction)
-        
+
         self.conv1 = nn.Conv2d(inp, mip, kernel_size=1, stride=1, padding=0)
         self.bn1 = nn.BatchNorm2d(mip)
         self.act = nn.SiLU()
-        
+
         self.conv_h = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
         self.conv_w = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
-        
+
     def forward(self, x):
         """Apply Coordinate Attention."""
         identity = x
-        
-        n, c, h, w = x.size()
+
+        _n, _c, h, w = x.size()
         # X方向池化
         x_h = self.pool_h(x)
         # Y方向池化
         x_w = self.pool_w(x).permute(0, 1, 3, 2)
-        
+
         # 拼接并编码
         y = torch.cat([x_h, x_w], dim=2)
         y = self.conv1(y)
         y = self.bn1(y)
         y = self.act(y)
-        
+
         # 分割并解码
         x_h, x_w = torch.split(y, [h, w], dim=2)
         x_w = x_w.permute(0, 1, 3, 2)
-        
+
         # 生成注意力权重
         a_h = self.conv_h(x_h).sigmoid()
         a_w = self.conv_w(x_w).sigmoid()
-        
+
         # 应用注意力
         out = identity * a_w * a_h
-        
+
         return out
 ```
 
@@ -305,31 +302,31 @@ class CoordAttention(nn.Module):
 
 ```yaml
 - [-1, 1, Conv, [256, 3, 2]]
-- [-1, 1, SEAttention, [256]]      # 卷积后添加注意力
+- [-1, 1, SEAttention, [256]] # 卷积后添加注意力
 ```
 
 ### 位置2: 在C2f模块之后
 
 ```yaml
 - [-1, 6, C2f, [512, True]]
-- [-1, 1, CBAM, [512]]             # C2f后添加注意力
+- [-1, 1, CBAM, [512]] # C2f后添加注意力
 ```
 
 ### 位置3: 在SPPF之后（backbone末尾）
 
 ```yaml
 - [-1, 1, SPPF, [1024, 5]]
-- [-1, 1, CoordAttention, [1024, 1024]]  # SPPF后添加注意力
+- [-1, 1, CoordAttention, [1024, 1024]] # SPPF后添加注意力
 ```
 
 ### 位置4: 在head中的特征融合处
 
 ```yaml
 head:
-  - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
-  - [[-1, 6], 1, Concat, [1]]
-  - [-1, 3, C2f, [512]]
-  - [-1, 1, ECAAttention, [512]]   # 融合后添加注意力
+    - [-1, 1, nn.Upsample, [None, 2, "nearest"]]
+    - [[-1, 6], 1, Concat, [1]]
+    - [-1, 3, C2f, [512]]
+    - [-1, 1, ECAAttention, [512]] # 融合后添加注意力
 ```
 
 ---
@@ -343,13 +340,13 @@ head:
 ```python
 class C2fSE(C2f):
     """C2f module with Squeeze-and-Excitation attention."""
-    
+
     def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5, reduction=16):
         """Initialize C2f with SE attention."""
         super().__init__(c1, c2, n, shortcut, g, e)
         # 在输出后添加SE注意力
         self.se = SEAttention(c2, reduction)
-    
+
     def forward(self, x):
         """Forward pass with SE attention."""
         y = super().forward(x)  # 调用C2f的forward
@@ -360,8 +357,8 @@ class C2fSE(C2f):
 
 ```yaml
 backbone:
-  - [-1, 3, C2fSE, [256, True, 1, False, 1, 0.5, 16]]
-  # 参数: [c2, shortcut, n, shortcut, g, e, reduction]
+    - [-1, 3, C2fSE, [256, True, 1, False, 1, 0.5, 16]]
+    # 参数: [c2, shortcut, n, shortcut, g, e, reduction]
 ```
 
 ### 示例: ConvCBAM - 带CBAM的卷积
@@ -369,13 +366,13 @@ backbone:
 ```python
 class ConvCBAM(nn.Module):
     """Convolution followed by CBAM attention."""
-    
+
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, kernel_size=7):
         """Initialize Conv + CBAM."""
         super().__init__()
         self.conv = Conv(c1, c2, k, s, p, g, d, act)
         self.cbam = CBAM(c2, kernel_size)
-    
+
     def forward(self, x):
         """Forward pass through Conv and CBAM."""
         return self.cbam(self.conv(x))
@@ -387,26 +384,25 @@ class ConvCBAM(nn.Module):
 
 ### 计算复杂度对比
 
-| 注意力类型 | 参数量 | 计算量 | 推理速度 | 精度提升 |
-|-----------|--------|--------|---------|---------|
-| SE | 低 | 低 | 快 | 中等 |
-| CBAM | 低 | 低 | 快 | 中等 |
-| ECA | 极低 | 极低 | 极快 | 中等 |
-| CoordAttention | 低 | 中等 | 中等 | 高 |
-| PSA | 中等 | 中等 | 中等 | 高 |
-| Transformer | 高 | 高 | 慢 | 高 |
+| 注意力类型     | 参数量 | 计算量 | 推理速度 | 精度提升 |
+| -------------- | ------ | ------ | -------- | -------- |
+| SE             | 低     | 低     | 快       | 中等     |
+| CBAM           | 低     | 低     | 快       | 中等     |
+| ECA            | 极低   | 极低   | 极快     | 中等     |
+| CoordAttention | 低     | 中等   | 中等     | 高       |
+| PSA            | 中等   | 中等   | 中等     | 高       |
+| Transformer    | 高     | 高     | 慢       | 高       |
 
 ### 适用场景建议
 
 1. **移动端/边缘设备**:
-   - 优先选择: ECA, SE
-   - 避免: Transformer, PSA
+    - 优先选择: ECA, SE
+    - 避免: Transformer, PSA
 
 2. **服务器端/高精度要求**:
-   - 推荐: CoordAttention, PSA, Transformer
-   
+    - 推荐: CoordAttention, PSA, Transformer
 3. **平衡性能和速度**:
-   - 推荐: CBAM, C2fAttn
+    - 推荐: CBAM, C2fAttn
 
 ---
 
@@ -417,13 +413,13 @@ class ConvCBAM(nn.Module):
 ```python
 class MultiAttention(nn.Module):
     """Combine multiple attention mechanisms."""
-    
+
     def __init__(self, channels):
         super().__init__()
         self.channel_attn = ChannelAttention(channels)
         self.spatial_attn = SpatialAttention()
         self.se_attn = SEAttention(channels)
-    
+
     def forward(self, x):
         x = self.channel_attn(x)
         x = self.spatial_attn(x)
@@ -436,14 +432,14 @@ class MultiAttention(nn.Module):
 ```python
 class ParallelAttention(nn.Module):
     """Parallel attention with weighted fusion."""
-    
+
     def __init__(self, channels):
         super().__init__()
         self.cbam = CBAM(channels)
         self.se = SEAttention(channels)
         # 可学习的融合权重
         self.alpha = nn.Parameter(torch.tensor(0.5))
-    
+
     def forward(self, x):
         cbam_out = self.cbam(x)
         se_out = self.se(x)
@@ -458,7 +454,8 @@ class ParallelAttention(nn.Module):
 
 ```python
 import torch
-from ultralytics.nn.modules import SEAttention, ECAAttention, CoordAttention
+
+from ultralytics.nn.modules import CoordAttention, ECAAttention, SEAttention
 
 # 创建测试输入
 x = torch.randn(2, 256, 40, 40)  # [batch, channels, height, width]
@@ -497,12 +494,15 @@ print(f"SE output range: [{y_se.min().item():.2f}, {y_se.max().item():.2f}]")
 ## 🚨 常见问题
 
 ### Q1: 添加注意力后精度下降？
+
 **A**: 可能是注意力参数设置不当，尝试调整reduction ratio或kernel size
 
 ### Q2: 推理速度明显变慢？
+
 **A**: 避免使用过多复杂注意力，考虑使用ECA等轻量级方案
 
 ### Q3: 注意力模块不起作用？
+
 **A**: 确保注意力的输出被正确使用，检查forward函数的实现
 
 ---

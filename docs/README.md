@@ -16,6 +16,7 @@ Welcome to Ultralytics Docs, your comprehensive resource for understanding and u
 ### 🏗️ YOLO Model Architecture Guide (中文)
 
 Comprehensive guide for modifying and customizing YOLO model architecture, including:
+
 - How to modify convolutional layer implementations
 - How to add attention mechanisms
 - Understanding model organization and code structure

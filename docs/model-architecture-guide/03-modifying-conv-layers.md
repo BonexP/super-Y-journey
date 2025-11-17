@@ -5,7 +5,9 @@
 ## 🎯 修改场景
 
 ### 场景1: 修改现有Conv类的行为
+
 ### 场景2: 创建新的卷积变体
+
 ### 场景3: 替换YAML中的卷积层
 
 ---
@@ -21,12 +23,14 @@
 **步骤**:
 
 1. 找到Conv类定义（第38行）:
+
 ```python
 class Conv(nn.Module):
     default_act = nn.SiLU()  # 原始代码
 ```
 
 2. 修改为:
+
 ```python
 class Conv(nn.Module):
     default_act = nn.Mish()  # 修改后
@@ -41,6 +45,7 @@ class Conv(nn.Module):
 **修改文件**: `ultralytics/nn/modules/conv.py`
 
 **原始的autopad函数**（第29-35行）:
+
 ```python
 def autopad(k, p=None, d=1):
     """Pad to 'same' shape outputs."""
@@ -52,6 +57,7 @@ def autopad(k, p=None, d=1):
 ```
 
 **修改示例 - 添加额外的padding**:
+
 ```python
 def autopad(k, p=None, d=1, extra_pad=0):
     """Pad to 'same' shape outputs with optional extra padding."""
@@ -67,12 +73,12 @@ def autopad(k, p=None, d=1, extra_pad=0):
     return p
 ```
 
-**然后修改Conv.__init__**:
+**然后修改Conv.**init****:
+
 ```python
 def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, extra_pad=0):
     super().__init__()
-    self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d, extra_pad), 
-                          groups=g, dilation=d, bias=False)
+    self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d, extra_pad), groups=g, dilation=d, bias=False)
     # ... 其余代码
 ```
 
@@ -81,17 +87,18 @@ def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, extra_pad=0):
 **目标**: 在Conv后添加Dropout层
 
 **修改Conv类**:
+
 ```python
 class Conv(nn.Module):
     default_act = nn.SiLU()
-    
+
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, dropout=0.0):
         super().__init__()
         self.conv = nn.Conv2d(c1, c2, k, s, autopad(k, p, d), groups=g, dilation=d, bias=False)
         self.bn = nn.BatchNorm2d(c2)
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
         self.dropout = nn.Dropout2d(dropout) if dropout > 0 else nn.Identity()  # 新增
-    
+
     def forward(self, x):
         return self.dropout(self.act(self.bn(self.conv(x))))  # 修改
 ```
@@ -108,11 +115,9 @@ class Conv(nn.Module):
 
 ```python
 class CoordConv(nn.Module):
+    """CoordConv adds coordinate information to convolution. Paper: https://arxiv.org/abs/1807.03247.
     """
-    CoordConv adds coordinate information to convolution.
-    Paper: https://arxiv.org/abs/1807.03247
-    """
-    
+
     def __init__(self, c1, c2, k=1, s=1, p=None, g=1, d=1, act=True, with_r=False):
         """
         Args:
@@ -124,43 +129,43 @@ class CoordConv(nn.Module):
             g (int): Groups
             d (int): Dilation
             act (bool|nn.Module): Activation
-            with_r (bool): Whether to add radius channel
+            with_r (bool): Whether to add radius channel.
         """
         super().__init__()
         # 额外的坐标通道: x, y, (可选)r
         extra_channels = 3 if with_r else 2
         self.with_r = with_r
-        
+
         # 卷积层的输入通道数需要加上坐标通道
         self.conv = Conv(c1 + extra_channels, c2, k, s, p, g, d, act)
-        
+
     def add_coords(self, x):
         """Add coordinate channels to input tensor."""
         batch_size, _, height, width = x.size()
-        
+
         # 生成x坐标
         xx_channel = torch.arange(width, dtype=x.dtype, device=x.device)
         xx_channel = xx_channel.repeat(1, height, 1)
         xx_channel = xx_channel / (width - 1)  # 归一化到[0, 1]
         xx_channel = xx_channel * 2 - 1  # 归一化到[-1, 1]
         xx_channel = xx_channel.repeat(batch_size, 1, 1, 1)
-        
+
         # 生成y坐标
         yy_channel = torch.arange(height, dtype=x.dtype, device=x.device)
         yy_channel = yy_channel.repeat(1, width, 1).transpose(1, 2)
         yy_channel = yy_channel / (height - 1)
         yy_channel = yy_channel * 2 - 1
         yy_channel = yy_channel.repeat(batch_size, 1, 1, 1)
-        
+
         ret = torch.cat([x, xx_channel, yy_channel], dim=1)
-        
+
         if self.with_r:
             # 生成半径通道
-            rr = torch.sqrt(xx_channel ** 2 + yy_channel ** 2)
+            rr = torch.sqrt(xx_channel**2 + yy_channel**2)
             ret = torch.cat([ret, rr], dim=1)
-        
+
         return ret
-    
+
     def forward(self, x):
         """Forward pass with coordinate information."""
         x = self.add_coords(x)
@@ -173,10 +178,10 @@ class CoordConv(nn.Module):
 __all__ = (
     "Conv",
     "Conv2",
-    "LightConv",
-    "DWConv",
     # ... 其他
     "CoordConv",  # 新增
+    "DWConv",
+    "LightConv",
 )
 ```
 
@@ -197,6 +202,7 @@ __all__ = (
 **步骤4**: 在 `ultralytics/nn/tasks.py` 的 `parse_model` 函数中注册（如果需要特殊处理）:
 
 在 `base_modules` frozenset 中添加（第1613-1654行）:
+
 ```python
 base_modules = frozenset(
     {
@@ -212,9 +218,9 @@ base_modules = frozenset(
 
 ```yaml
 backbone:
-  - [-1, 1, CoordConv, [64, 3, 2]]  # 使用CoordConv替代Conv
-  - [-1, 1, Conv, [128, 3, 2]]
-  # ...
+    - [-1, 1, CoordConv, [64, 3, 2]] # 使用CoordConv替代Conv
+    - [-1, 1, Conv, [128, 3, 2]]
+    # ...
 ```
 
 ### 示例2.2: 创建OctaveConv（八度卷积）
@@ -223,11 +229,9 @@ backbone:
 
 ```python
 class OctaveConv(nn.Module):
+    """Octave Convolution splits features into high and low frequency. Paper: https://arxiv.org/abs/1904.05049.
     """
-    Octave Convolution splits features into high and low frequency.
-    Paper: https://arxiv.org/abs/1904.05049
-    """
-    
+
     def __init__(self, c1, c2, k=3, s=1, alpha_in=0.5, alpha_out=0.5, act=True):
         """
         Args:
@@ -237,25 +241,25 @@ class OctaveConv(nn.Module):
             s (int): Stride
             alpha_in (float): Ratio of low-freq input channels
             alpha_out (float): Ratio of low-freq output channels
-            act (bool|nn.Module): Activation
+            act (bool|nn.Module): Activation.
         """
         super().__init__()
-        
+
         # 计算高低频通道数
         self.h_in = int(c1 * (1 - alpha_in))
         self.l_in = c1 - self.h_in
         self.h_out = int(c2 * (1 - alpha_out))
         self.l_out = c2 - self.h_out
-        
+
         # 四个卷积分支: H->H, H->L, L->H, L->L
         self.conv_h2h = Conv(self.h_in, self.h_out, k, s, act=act) if self.h_out > 0 else None
         self.conv_h2l = Conv(self.h_in, self.l_out, k, s, act=act) if self.l_out > 0 else None
         self.conv_l2h = Conv(self.l_in, self.h_out, k, s, act=act) if self.h_out > 0 else None
         self.conv_l2l = Conv(self.l_in, self.l_out, k, s, act=act) if self.l_out > 0 else None
-        
+
         self.pool = nn.AvgPool2d(2, 2)
-        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
-        
+        self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
+
     def forward(self, x):
         """Forward pass with high and low frequency separation."""
         # 如果输入是元组（高频，低频），否则分割
@@ -263,23 +267,23 @@ class OctaveConv(nn.Module):
             x_h, x_l = x
         else:
             x_h, x_l = x.split([self.h_in, self.l_in], dim=1)
-        
+
         # H -> H
         h2h = self.conv_h2h(x_h) if self.conv_h2h is not None else None
-        
+
         # H -> L (需要下采样)
         h2l = self.conv_h2l(self.pool(x_h)) if self.conv_h2l is not None else None
-        
+
         # L -> H (需要上采样)
         l2h = self.upsample(self.conv_l2h(x_l)) if self.conv_l2h is not None else None
-        
+
         # L -> L
         l2l = self.conv_l2l(x_l) if self.conv_l2l is not None else None
-        
+
         # 合并高低频特征
         out_h = h2h + l2h if (h2h is not None and l2h is not None) else (h2h if h2h is not None else l2h)
         out_l = h2l + l2l if (h2l is not None and l2l is not None) else (h2l if h2l is not None else l2l)
-        
+
         # 返回元组或拼接
         if out_h is not None and out_l is not None:
             return torch.cat([out_h, out_l], dim=1)
@@ -293,21 +297,23 @@ class OctaveConv(nn.Module):
 ### 示例3.1: 替换backbone中的所有Conv
 
 **原始YAML** (`ultralytics/cfg/models/v8/yolov8.yaml`):
+
 ```yaml
 backbone:
-  - [-1, 1, Conv, [64, 3, 2]]   # 0-P1/2
-  - [-1, 1, Conv, [128, 3, 2]]  # 1-P2/4
-  - [-1, 3, C2f, [128, True]]
-  - [-1, 1, Conv, [256, 3, 2]]  # 3-P3/8
+    - [-1, 1, Conv, [64, 3, 2]] # 0-P1/2
+    - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
+    - [-1, 3, C2f, [128, True]]
+    - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
 ```
 
 **修改后 - 使用CoordConv**:
+
 ```yaml
 backbone:
-  - [-1, 1, CoordConv, [64, 3, 2]]   # 使用CoordConv
-  - [-1, 1, CoordConv, [128, 3, 2]]  # 使用CoordConv
-  - [-1, 3, C2f, [128, True]]
-  - [-1, 1, CoordConv, [256, 3, 2]]  # 使用CoordConv
+    - [-1, 1, CoordConv, [64, 3, 2]] # 使用CoordConv
+    - [-1, 1, CoordConv, [128, 3, 2]] # 使用CoordConv
+    - [-1, 3, C2f, [128, True]]
+    - [-1, 1, CoordConv, [256, 3, 2]] # 使用CoordConv
 ```
 
 ### 示例3.2: 只替换下采样层
@@ -316,10 +322,10 @@ backbone:
 
 ```yaml
 backbone:
-  - [-1, 1, CoordConv, [64, 3, 2]]   # 下采样 - 使用CoordConv
-  - [-1, 1, Conv, [128, 3, 2]]       # 下采样 - 普通Conv
-  - [-1, 3, C2f, [128, True]]        # 特征提取
-  - [-1, 1, Conv, [256, 3, 2]]       # 下采样
+    - [-1, 1, CoordConv, [64, 3, 2]] # 下采样 - 使用CoordConv
+    - [-1, 1, Conv, [128, 3, 2]] # 下采样 - 普通Conv
+    - [-1, 3, C2f, [128, True]] # 特征提取
+    - [-1, 1, Conv, [256, 3, 2]] # 下采样
 ```
 
 ---
@@ -333,23 +339,23 @@ backbone:
 ```python
 class AdaptiveConv(nn.Module):
     """Adaptively choose convolution type based on input size."""
-    
-    def __init__(self, c1, c2, k=1, s=1, conv_type='auto', **kwargs):
+
+    def __init__(self, c1, c2, k=1, s=1, conv_type="auto", **kwargs):
         super().__init__()
-        
-        if conv_type == 'auto':
+
+        if conv_type == "auto":
             # 小通道数用普通卷积，大通道数用DW卷积
             if c1 < 64:
                 self.conv = Conv(c1, c2, k, s, **kwargs)
             else:
                 self.conv = DWConv(c1, c2, k, s, **kwargs)
-        elif conv_type == 'coord':
+        elif conv_type == "coord":
             self.conv = CoordConv(c1, c2, k, s, **kwargs)
-        elif conv_type == 'ghost':
+        elif conv_type == "ghost":
             self.conv = GhostConv(c1, c2, k, s, **kwargs)
         else:
             self.conv = Conv(c1, c2, k, s, **kwargs)
-    
+
     def forward(self, x):
         return self.conv(x)
 ```
@@ -360,30 +366,33 @@ class AdaptiveConv(nn.Module):
 
 ```python
 # 在 ultralytics/nn/modules/conv.py 顶部添加
-CONV_BACKEND = 'standard'  # 'standard', 'coord', 'octave', etc.
+CONV_BACKEND = "standard"  # 'standard', 'coord', 'octave', etc.
+
 
 class FlexibleConv(nn.Module):
     """Flexible convolution that can switch backend."""
-    
+
     def __init__(self, c1, c2, k=1, s=1, **kwargs):
         super().__init__()
-        
-        if CONV_BACKEND == 'coord':
+
+        if CONV_BACKEND == "coord":
             self.conv = CoordConv(c1, c2, k, s, **kwargs)
-        elif CONV_BACKEND == 'octave':
+        elif CONV_BACKEND == "octave":
             self.conv = OctaveConv(c1, c2, k, s, **kwargs)
         else:
             self.conv = Conv(c1, c2, k, s, **kwargs)
-    
+
     def forward(self, x):
         return self.conv(x)
 ```
 
 使用时:
+
 ```python
 # 在训练脚本开头设置
 from ultralytics.nn.modules import conv
-conv.CONV_BACKEND = 'coord'
+
+conv.CONV_BACKEND = "coord"
 ```
 
 ---
@@ -393,8 +402,9 @@ conv.CONV_BACKEND = 'coord'
 ### 步骤1: 测试模块能否正确导入
 
 ```python
-from ultralytics.nn.modules import CoordConv
 import torch
+
+from ultralytics.nn.modules import CoordConv
 
 # 创建测试输入
 x = torch.randn(1, 3, 640, 640)
@@ -417,7 +427,7 @@ print(f"Output shape: {y.shape}")
 from ultralytics import YOLO
 
 # 创建自定义YAML
-model = YOLO('path/to/your/custom.yaml')
+model = YOLO("path/to/your/custom.yaml")
 model.info()  # 查看模型信息
 ```
 
@@ -425,7 +435,7 @@ model.info()  # 查看模型信息
 
 ```python
 # 小规模测试
-model.train(data='coco8.yaml', epochs=1, imgsz=640)
+model.train(data="coco8.yaml", epochs=1, imgsz=640)
 ```
 
 ---
@@ -441,12 +451,15 @@ model.train(data='coco8.yaml', epochs=1, imgsz=640)
 ## 🚨 常见问题
 
 ### Q1: 修改后模型无法加载
+
 **A**: 确保在 `__init__.py` 和 `tasks.py` 中正确注册新模块
 
 ### Q2: YAML中使用新模块报错
+
 **A**: 检查模块名是否在 `__all__` 中导出
 
 ### Q3: 通道数不匹配
+
 **A**: 注意某些卷积（如CoordConv）会改变输入通道数
 
 ---
