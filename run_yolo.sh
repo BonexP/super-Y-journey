@@ -5,7 +5,7 @@ set -euo pipefail
 
 # 显示帮助文档的函数
 show_help() {
-    cat << EOF
+  cat << EOF
 YOLO 模型训练脚本
 
 用法：
@@ -33,8 +33,8 @@ EOF
 
 # 1. 检查参数
 if [[ $# -ne 1 ]]; then
-    show_help
-    exit 1
+  show_help
+  exit 1
 fi
 
 NAME=$1
