@@ -10,7 +10,7 @@ def parse_args():
                         help='模型配置文件路径')
     parser.add_argument('--epochs', type=int, default=300, help='训练 epochs')
     # 允许 -1 自动探测最大 batch
-    parser.add_argument('--batch-size', type=int, default=64, help='batch size，建议 64/128，或设为 -1 自动探测')
+    parser.add_argument('--batch-size', type=int, default=16, help='batch sizem,默认为16 ，建议 64/128，或设为 -1 自动探测')
     parser.add_argument('--img-size', type=int, default=640, help='输入图片大小')
     parser.add_argument('--optimizer', type=str, default='Adam', choices=['SGD', 'Adam'], help='优化器')
     parser.add_argument('--lr0', type=float, default=0.001, help='初始学习率')
@@ -22,10 +22,10 @@ def parse_args():
     parser.add_argument('--workers', type=int, default=16, help='DataLoader workers 数')
     parser.add_argument('--cache', type=str, default='ram', choices=['', 'ram', 'disk'],
                         help='缓存数据集到内存或磁盘，加速 IO')
-    parser.add_argument('--deterministic', action='store_true', default=False,
-                        help='确定性训练（会变慢，默认关闭）')
-    parser.add_argument('--rect', action='store_true', default=True,
-                        help='矩形训练以减少 padding/resize 开销（默认开）')
+    parser.add_argument('--deterministic', action='store_true', default=True,
+                        help='确定性训练（会变慢，默认打开） 。强制使用确定性算法，确保可重复性，但由于限制了非确定性算法，可能会影响性能和速度。')
+    parser.add_argument('--rect', action='store_true', default=False,
+                        help='矩形训练以减少 padding/resize 开销（默认关闭） 。启用最小填充策略——批量中的图像被最小程度地填充以达到一个共同的大小，最长边等于 imgsz。可以提高效率和速度，但可能会影响模型精度。')
 
     # 数据增强总开关
     parser.add_argument('--augment', action='store_true', help='启用数据增强')
