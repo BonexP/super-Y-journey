@@ -17,8 +17,8 @@ YOLO 模型训练脚本
     name                训练任务名称（会自动添加 --name 前缀）
 
 可选参数：
-    --cfg PATH          数据集配置文件路径 (默认: /home/user/PROJECT/pp/NEU-DET_YOLO_state_qmh/NEU-DET.yaml)
-    --model PATH        模型配置文件路径 (默认: ./modified_yolo11s.yaml)
+    --cfg PATH          数据集配置文件路径 (默认: /home/user/PROJECT/FSWD/FSW-MERGE/data.yaml)
+    --model PATH        模型配置文件路径 (默认: ultralytics/cfg/models/11/yolo11s.yaml)
     --epochs N          训练轮数 (默认: 300)
     --batch-size N      批次大小 (默认: 16)
     --img-size N        输入图片大小 (默认: 640)
