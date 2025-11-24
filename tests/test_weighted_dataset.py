@@ -11,6 +11,28 @@ from pathlib import Path
 import tempfile
 import shutil
 
+# Determine cv2 availability once at module level
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    from PIL import Image
+    CV2_AVAILABLE = False
+
+
+def save_image(img_array, img_path):
+    """
+    Helper function to save an image using cv2 or PIL.
+    
+    Args:
+        img_array (np.ndarray): Image array to save.
+        img_path (str or Path): Path where to save the image.
+    """
+    if CV2_AVAILABLE:
+        cv2.imwrite(str(img_path), img_array)
+    else:
+        Image.fromarray(img_array).save(str(img_path))
+
 
 def create_test_dataset():
     """
@@ -31,56 +53,28 @@ def create_test_dataset():
     label_dir.mkdir(parents=True, exist_ok=True)
     
     # Create some dummy images and labels
-    # Image 1: Class 0 (common class) - 3 instances
-    img1 = np.zeros((640, 640, 3), dtype=np.uint8)
-    cv2_available = True
-    try:
-        import cv2
-        cv2.imwrite(str(img_dir / "img1.jpg"), img1)
-    except ImportError:
-        cv2_available = False
-        from PIL import Image
-        Image.fromarray(img1).save(str(img_dir / "img1.jpg"))
+    dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
     
+    # Image 1: Class 0 (common class) - 3 instances
+    save_image(dummy_img, img_dir / "img1.jpg")
     with open(label_dir / "img1.txt", "w") as f:
         f.write("0 0.5 0.5 0.2 0.2\n")  # Class 0
         f.write("0 0.3 0.3 0.1 0.1\n")  # Class 0
         f.write("0 0.7 0.7 0.1 0.1\n")  # Class 0
     
     # Image 2: Class 1 (rare class) - 1 instance
-    img2 = np.zeros((640, 640, 3), dtype=np.uint8)
-    if cv2_available:
-        import cv2
-        cv2.imwrite(str(img_dir / "img2.jpg"), img2)
-    else:
-        from PIL import Image
-        Image.fromarray(img2).save(str(img_dir / "img2.jpg"))
-    
+    save_image(dummy_img, img_dir / "img2.jpg")
     with open(label_dir / "img2.txt", "w") as f:
         f.write("1 0.5 0.5 0.3 0.3\n")  # Class 1
     
     # Image 3: Class 0 (common class) - 2 instances
-    img3 = np.zeros((640, 640, 3), dtype=np.uint8)
-    if cv2_available:
-        import cv2
-        cv2.imwrite(str(img_dir / "img3.jpg"), img3)
-    else:
-        from PIL import Image
-        Image.fromarray(img3).save(str(img_dir / "img3.jpg"))
-    
+    save_image(dummy_img, img_dir / "img3.jpg")
     with open(label_dir / "img3.txt", "w") as f:
         f.write("0 0.4 0.4 0.2 0.2\n")  # Class 0
         f.write("0 0.6 0.6 0.2 0.2\n")  # Class 0
     
     # Image 4: Empty (background)
-    img4 = np.zeros((640, 640, 3), dtype=np.uint8)
-    if cv2_available:
-        import cv2
-        cv2.imwrite(str(img_dir / "img4.jpg"), img4)
-    else:
-        from PIL import Image
-        Image.fromarray(img4).save(str(img_dir / "img4.jpg"))
-    
+    save_image(dummy_img, img_dir / "img4.jpg")
     with open(label_dir / "img4.txt", "w") as f:
         pass  # Empty file
     

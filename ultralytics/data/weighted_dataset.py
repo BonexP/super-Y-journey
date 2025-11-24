@@ -42,13 +42,12 @@ class YOLOWeightedDataset(YOLODataset):
         >>> build.YOLODataset = YOLOWeightedDataset
     """
 
-    def __init__(self, *args, mode="train", **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the YOLOWeightedDataset.
 
         Args:
             *args (Any): Positional arguments passed to YOLODataset.
-            mode (str): Dataset mode, used to determine if in training mode.
             **kwargs (Any): Keyword arguments passed to YOLODataset.
         """
         super(YOLOWeightedDataset, self).__init__(*args, **kwargs)
@@ -58,13 +57,12 @@ class YOLOWeightedDataset(YOLODataset):
 
         # Calculate class weights and sampling probabilities
         self.count_instances()
-        class_weights = np.sum(self.counts) / self.counts
+        self.class_weights = np.sum(self.counts) / self.counts
 
         # Aggregation function to combine weights for images with multiple objects
         # Can be changed to np.max, np.min, etc. for different weighting strategies
         self.agg_func = np.mean
 
-        self.class_weights = np.array(class_weights)
         self.weights = self.calculate_weights()
         self.probabilities = self.calculate_probabilities()
 
