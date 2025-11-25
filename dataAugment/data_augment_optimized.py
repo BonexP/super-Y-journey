@@ -8,9 +8,9 @@ import albumentations as A
 cv2.setNumThreads(0)
 
 # 配置路径
-base_path = "/home/user/PROJECT/FSWD/FSW-MERGE"
-output_double = "/home/user/PROJECT/FSWD/FSW-MERGE_augmented_double"
-output_quadruple = "/home/user/PROJECT/FSWD/FSW-MERGE_augmented_quadruple"
+base_path = "/home/user/FSW-MERGE/FSW-MERGE"
+output_double = "/home/user/MERGE/FSW-MERGE_augmented_double"
+output_quadruple = "/home/user/MERGE/FSW-MERGE_augmented_quadruple"
 
 # 从data.yaml读取类别信息
 yaml_path = os.path.join(base_path, "data.yaml")

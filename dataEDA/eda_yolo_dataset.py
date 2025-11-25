@@ -26,7 +26,7 @@ import plotly.express as px
 # ------------------------------
 # Configurable Paths
 # ------------------------------
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 支持中文字体
+# Use default font settings (removed Chinese font configuration)
 plt.rcParams['axes.unicode_minus'] = False
 sns.set(style="whitegrid", font_scale=1.2)
 
@@ -101,9 +101,9 @@ def perform_eda(dataset_root, interactive=False):
     cls_names = [names[int(i)] for i in cls_counts.index]
     fig, ax = plt.subplots(figsize=(8,5))
     sns.barplot(x=cls_names, y=cls_counts.values, palette="viridis", ax=ax)
-    ax.set_title("类别目标数量分布")
-    ax.set_xlabel("类别")
-    ax.set_ylabel("数量")
+    ax.set_title("Class Distribution")
+    ax.set_xlabel("Class")
+    ax.set_ylabel("Count")
     save_plot(fig, "class_distribution.png")
 
     # Bounding box geometry
@@ -112,25 +112,25 @@ def perform_eda(dataset_root, interactive=False):
 
     fig, ax = plt.subplots(figsize=(7,5))
     sns.histplot(all_labels["area"], bins=50, kde=True, ax=ax)
-    ax.set_title("目标框面积分布")
+    ax.set_title("Bounding Box Area Distribution")
     save_plot(fig, "bbox_area_distribution.png")
 
     fig, ax = plt.subplots(figsize=(7,5))
     sns.histplot(all_labels["aspect_ratio"], bins=50, kde=True, ax=ax)
-    ax.set_title("宽高比分布")
+    ax.set_title("Aspect Ratio Distribution")
     save_plot(fig, "bbox_aspect_ratio.png")
 
     # Heatmap of bbox centers
     fig, ax = plt.subplots(figsize=(6,6))
     sns.kdeplot(x=all_labels["x"], y=all_labels["y"], fill=True, cmap="Reds", ax=ax)
-    ax.set_title("目标中心点热力图")
+    ax.set_title("Bounding Box Center Heatmap")
     save_plot(fig, "bbox_heatmap.png")
 
     # Per-image box counts
     img_obj_counts = all_labels.groupby("file").size()
     fig, ax = plt.subplots(figsize=(7,5))
     sns.histplot(img_obj_counts, bins=30, kde=False, ax=ax)
-    ax.set_title("每张图片的目标数量分布")
+    ax.set_title("Objects per Image Distribution")
     save_plot(fig, "objects_per_image.png")
 
     # Example images per class
@@ -160,11 +160,11 @@ def perform_eda(dataset_root, interactive=False):
     if interactive:
         print("⚡ Generating interactive visualizations...")
         fig1 = px.histogram(all_labels, x="area", color=all_labels["class"].map(names), nbins=40,
-                            title="交互式：不同类别的面积分布")
+                            title="Interactive: Area Distribution by Class")
         interactive_figs.append(fig1.to_html(full_html=False, include_plotlyjs='cdn'))
 
         fig2 = px.scatter(all_labels, x="x", y="y", color=all_labels["class"].map(names),
-                          title="交互式：目标中心点分布")
+                          title="Interactive: Object Center Distribution")
         interactive_figs.append(fig2.to_html(full_html=False, include_plotlyjs='cdn'))
 
     # ------------------------------
@@ -252,7 +252,7 @@ def perform_eda(dataset_root, interactive=False):
     with open("EDA_Report.html", "w", encoding="utf-8") as f:
         f.write(html)
 
-    print("🎉 EDA 完成！报告已生成：EDA_Report.html")
+    print("🎉 EDA Complete! Report generated: EDA_Report.html")
 
 # ------------------------------
 # CLI Entry
