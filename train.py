@@ -3,6 +3,9 @@ from pathlib import Path
 from ultralytics import YOLO
 import ultralytics.data.build as build
 from ultralytics.data.weighted_dataset import YOLOWeightedDataset
+
+from ultralytics import YOLO
+>>>>>>> Stashed changes
 def parse_args():
     parser = argparse.ArgumentParser(description='YOLO11 Baseline Training Script')
     parser.add_argument('--cfg', type=str, default='/home/user/PROJECT/FSWD/FSW-MERGE/data.yaml',
@@ -108,6 +111,7 @@ if __name__ == '__main__':
         patience=50,
         save_period=10,
         amp=True,
+        plots=True,
     )
 
     print(f"Training complete. Results saved to: {save_dir}")
