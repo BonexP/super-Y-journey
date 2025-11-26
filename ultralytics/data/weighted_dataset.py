@@ -52,6 +52,12 @@ class YOLOWeightedDataset(YOLODataset):
         """
         super(YOLOWeightedDataset, self).__init__(*args, **kwargs)
 
+        # 这里输出：说明正在使用加权数据集
+        if "train" in self.prefix:
+            print(f"[YOLOWeightedDataset] 使用加权采样进行训练，prefix={self.prefix}")
+        else:
+            print(f"[YOLOWeightedDataset] 非训练模式加载，prefix={self.prefix}")
+
         # Determine if we're in training mode based on prefix
         self.train_mode = "train" in self.prefix
 
@@ -85,6 +91,9 @@ class YOLOWeightedDataset(YOLODataset):
         self.counts = np.array(self.counts)
         # Avoid division by zero for classes with no instances
         self.counts = np.where(self.counts == 0, 1, self.counts)
+
+        # 日志：简单统计信息
+        print(f"[YOLOWeightedDataset] 类别总数={len(self.counts)}，实例总数={int(self.counts.sum())}")
 
     def calculate_weights(self):
         """
