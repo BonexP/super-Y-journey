@@ -46,6 +46,9 @@ def parse_args():
 
     parser.add_argument('--project', type=str, default='runs/train', help='结果保存目录')
     parser.add_argument('--name', type=str, default='baseline_yolo11', help='实验名')
+    # 新增：是否启用加权 DataLoader
+    parser.add_argument('--weighted-dataloader', action='store_true',
+                        help='启用加权 YOLOWeightedDataset 以缓解类别不平衡')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -81,18 +84,26 @@ if __name__ == '__main__':
         }
         print("❌ 数据增强已关闭")
 
+    # 是否启用加权 DataLoader 的日志和猴子补丁
+    if args.weighted_dataloader:
+        build.YOLODataset = YOLOWeightedDataset
+        print("✅ 已启用加权 DataLoader: ultralytics.data.weighted_dataset.YOLOWeightedDataset")
+    else:
+        print("ℹ️ 未启用加权 DataLoader，使用默认 ultralytics.data.build.YOLODataset")
+
     cache_opt = args.cache if args.cache in ('ram', 'disk') else False
-    build.YOLODataset=YOLOWeightedDataset
+    # build.YOLODataset = YOLOWeightedDataset  # 旧的强制猴子补丁可以删掉或保留为注释
+
     model.train(
         data=args.cfg,
         imgsz=args.img_size,
         epochs=args.epochs,
-        batch=args.batch_size,           # 建议：64/128，或 -1 自动探测
-        device=args.device,              # 显式绑定 GPU
-        workers=args.workers,            # 提高到 8~16
-        cache=cache_opt,                 # 缓存到内存/磁盘
-        rect=args.rect,                  # 减少 padding/resize
-        deterministic=args.deterministic,  # 关闭可提速
+        batch=args.batch_size,
+        device=args.device,
+        workers=args.workers,
+        cache=cache_opt,
+        rect=args.rect,
+        deterministic=args.deterministic,
         lr0=args.lr0,
         weight_decay=args.weight_decay,
         momentum=args.momentum,
@@ -100,12 +111,9 @@ if __name__ == '__main__':
         project=args.project,
         name=args.name,
         exist_ok=True,
-        # 展开增强配置字典
         **augment_config,
-        # 这两个参数不受总开关控制
         warmup_epochs=args.warmup_epochs,
         close_mosaic=args.close_mosaic,
-        # 早停与 checkpoint
         patience=50,
         save_period=10,
         amp=True,
