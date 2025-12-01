@@ -279,7 +279,8 @@ def augment_dataset(original_train_img_dir, original_train_label_dir, output_img
                     aug_label_path = os.path.join(output_label_dir, aug_label_name)
                     with open(aug_label_path, 'w') as f:
                         for bbox, class_id in zip(transformed_bboxes, transformed_class_labels):
-                            f.write(f"{class_id} {bbox[0]} {bbox[1]} {bbox[2]} {bbox[3]}\n")
+                            # 确保class_id是整数（防止Albumentations返回浮点数）
+                            f.write(f"{int(class_id)} {bbox[0]} {bbox[1]} {bbox[2]} {bbox[3]}\n")
 
                     total_augmented += 1
                     success = True
