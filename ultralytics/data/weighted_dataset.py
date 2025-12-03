@@ -63,13 +63,16 @@ class YOLOWeightedDataset(YOLODataset):
 
         # Calculate class weights and sampling probabilities
         self.count_instances()
-        # 使用 RFS 风格的权重: sqrt(1 / f)
-        self.class_weights = np.sqrt(np.sum(self.counts) / self.counts)
+        # 传统的逆频率权重计算方式
+        self.class_weights = np.sum(self.counts) / self.counts
+
+
+        # 可选: 使用 RFS 风格的权重: sqrt(1 / f)
+        # self.class_weights = np.sqrt(np.sum(self.counts) / self.counts)
 
         # Aggregation function to combine weights for images with multiple objects
         # Can be changed to np.max, np.min, etc. for different weighting strategies
-        # 使用最大值聚合，提升少数类样本的整体权重
-        self.agg_func = np.max
+        self.agg_func = np.mean
 
         self.weights = self.calculate_weights()
         self.probabilities = self.calculate_probabilities()
